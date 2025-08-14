@@ -1,0 +1,1150 @@
+openapi: 3.0.3
+info:
+  title: Streamshort API
+  version: "1.0.0"
+  description: |
+    Streamshort — short-video streaming platform (MVP).
+    Mobile-first (Flutter). Backend in Go, DB Neon (Postgres-compatible).
+    Core flows: phone OTP auth, creator onboarding, upload/transcode orchestration,
+    subscription payments (Razorpay), signed HLS playback, interactions, and admin moderation.
+
+servers:
+  - url: https://api.streamshort.com/v1
+    description: Production server
+  - url: https://staging.api.streamshort.com/v1
+    description: Staging server
+
+tags:
+  - name: Auth
+    description: Authentication (phone OTP)
+  - name: Creators
+    description: Creator onboarding and dashboard
+  - name: Content
+    description: Series, episodes, uploads, playback
+  - name: Payments
+    description: Razorpay integration & subscription lifecycle
+  - name: Engagement
+    description: Likes, ratings, comments
+  - name: Admin
+    description: Admin moderation & workflows
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    razorpayWebhook:
+      type: apiKey
+      in: header
+      name: X-Razorpay-Signature
+
+  schemas:
+
+    # Auth
+    PhoneOtpRequest:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          description: E.164 format preferred (India example)
+          example: "+919876543210"
+
+    PhoneOtpSendResponse:
+      type: object
+      properties:
+        txn_id:
+          type: string
+          example: "otp_txn_8d92f3b6"
+        expires_in:
+          type: integer
+          example: 300
+        message:
+          type: string
+          example: "OTP sent to +919876543210"
+
+    PhoneOtpVerifyRequest:
+      type: object
+      required: [phone, otp]
+      properties:
+        phone:
+          type: string
+          example: "+919876543210"
+        otp:
+          type: string
+          example: "123456"
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5..."
+        refresh_token:
+          type: string
+          example: "rfrsh_4df92a...c9"
+        expires_in:
+          type: integer
+          example: 3600
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          example: "rfrsh_4df92a...c9"
+
+    # Creators
+    CreatorOnboardRequest:
+      type: object
+      required: [display_name, kyc_document_s3_path]
+      properties:
+        display_name:
+          type: string
+          example: "Arjun Films"
+        bio:
+          type: string
+          example: "Short films in Hindi & Marathi"
+        kyc_document_s3_path:
+          type: string
+          example: "s3://uploads/kyc/kyc_doc_1234.jpg"
+
+    CreatorProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "9c8c42ee-4710-4a1d-83df-f17fd748f5a7"
+        user_id:
+          type: string
+          example: "52ff0b94-1b74-42a5-a78c-baa8724b7cf1"
+        display_name:
+          type: string
+          example: "Arjun Films"
+        bio:
+          type: string
+          example: "Short films in Hindi & Marathi"
+        kyc_status:
+          type: string
+          enum: [pending, verified, rejected]
+          example: "pending"
+        payout_details:
+          type: object
+          nullable: true
+        rating:
+          type: number
+          format: float
+
+    CreatorDashboardResponse:
+      type: object
+      properties:
+        views:
+          type: integer
+          example: 1245
+        watch_time_seconds:
+          type: integer
+          example: 456780
+        earnings:
+          type: number
+          example: 1299.50
+
+    # Content
+    Series:
+      type: object
+      required: [title, synopsis, language]
+      properties:
+        id:
+          type: string
+          example: "series_001"
+        creator_id:
+          type: string
+          example: "creator_123"
+        title:
+          type: string
+          example: "Life in 60 Seconds"
+        synopsis:
+          type: string
+          example: "Quick stories from everyday life."
+        language:
+          type: string
+          example: "en"
+        category_tags:
+          type: array
+          items:
+            type: string
+          example: ["comedy","drama"]
+        price_type:
+          type: string
+          enum: [free, subscription, one_time]
+          example: "subscription"
+        price_amount:
+          type: number
+          example: 99
+        thumbnail_url:
+          type: string
+          example: "https://cdn.streamshort.com/thumbnails/series_001.jpg"
+        status:
+          type: string
+          enum: [draft, published]
+          example: "draft"
+        created_at:
+          type: string
+          format: date-time
+
+    Episode:
+      type: object
+      required: [title, episode_number, duration_seconds]
+      properties:
+        id:
+          type: string
+          example: "episode_001"
+        series_id:
+          type: string
+          example: "series_001"
+        title:
+          type: string
+          example: "The First Step"
+        episode_number:
+          type: integer
+          example: 1
+        duration_seconds:
+          type: integer
+          example: 300
+        s3_master_path:
+          type: string
+          nullable: true
+          example: "s3://streamshort/uploads/ep001_master.mp4"
+        hls_manifest_url:
+          type: string
+          nullable: true
+          example: "https://cdn.streamshort.com/hls/ep001/manifest.m3u8"
+        thumb_url:
+          type: string
+          nullable: true
+          example: "https://cdn.streamshort.com/thumbs/ep001.jpg"
+        captions_url:
+          type: string
+          nullable: true
+          example: "https://cdn.streamshort.com/captions/ep001.vtt"
+        status:
+          type: string
+          enum: [pending_upload, queued_transcode, ready, published]
+          example: "pending_upload"
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    UploadRequest:
+      type: object
+      required: [filename, content_type, size_bytes]
+      properties:
+        filename:
+          type: string
+          example: "episode1_master.mp4"
+        content_type:
+          type: string
+          example: "video/mp4"
+        size_bytes:
+          type: integer
+          example: 73400320
+        metadata:
+          type: object
+          additionalProperties: true
+          example:
+            series_id: "series_001"
+            episode_title: "Episode 1 - The Beginning"
+
+    UploadUrlResponse:
+      type: object
+      properties:
+        upload_id:
+          type: string
+          example: "upl_94f3d82b"
+        presigned_url:
+          type: string
+          example: "https://s3.amazonaws.com/bucket/upl_94f3d82b?AWSAccessKeyId=..."
+        expires_in:
+          type: integer
+          example: 3600
+        upload_headers:
+          type: object
+          additionalProperties: true
+          example:
+            Content-Type: "video/mp4"
+
+    UploadNotifyRequest:
+      type: object
+      required: [s3_path, size_bytes]
+      properties:
+        s3_path:
+          type: string
+          example: "s3://bucket/upl_94f3d82b/episode1_master.mp4"
+        size_bytes:
+          type: integer
+          example: 73400320
+
+    UploadNotifyResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "queued_for_transcoding"
+
+    ManifestResponse:
+      type: object
+      properties:
+        manifest_url:
+          type: string
+          example: "https://cdn.streamshort.com/hls/episode1/index.m3u8?Expires=1723598700&Signature=..."
+        expires_at:
+          type: string
+          format: date-time
+          example: "2025-08-15T12:00:00Z"
+
+    # Payments
+    PaymentCreateRequest:
+      type: object
+      required: [target_type, target_id, plan_id]
+      properties:
+        user_id:
+          type: string
+          nullable: true
+          example: "52ff0b94-1b74-42a5-a78c-baa8724b7cf1"
+        target_type:
+          type: string
+          enum: [series, creator]
+          example: "series"
+        target_id:
+          type: string
+          example: "series_001"
+        plan_id:
+          type: string
+          example: "plan_J2Wf5A9tD6a1Xy"
+
+    PaymentCreateResponse:
+      type: object
+      properties:
+        razorpay_order_id:
+          type: string
+          example: "order_J2WhZB6t8D6b7Q"
+        razorpay_subscription_id:
+          type: string
+          example: "sub_J2WhxVd5jM3lNw"
+        subscription_id:
+          type: string
+          example: "sub_9f35a4e6"
+        checkout_url:
+          type: string
+          example: "https://checkout.razorpay.com/v1/checkout.js?order_id=order_J2WhZB6t8D6b7Q"
+
+    PaymentWebhookPayload:
+      type: object
+      properties:
+        event:
+          type: string
+          example: "subscription.activated"
+        payload:
+          type: object
+          additionalProperties: true
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "sub_9f35a4e6"
+        user_id:
+          type: string
+          example: "52ff0b94-1b74-42a5-a78c-baa8724b7cf1"
+        target_type:
+          type: string
+          example: "series"
+        target_id:
+          type: string
+          example: "series_001"
+        razorpay_subscription_id:
+          type: string
+          example: "sub_J2WhxVd5jM3lNw"
+        status:
+          type: string
+          enum: [active, cancelled, expired]
+          example: "active"
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+
+    # Engagement
+    LikeRequest:
+      type: object
+      required: [episode_id]
+      properties:
+        episode_id:
+          type: string
+          example: "episode_001"
+
+    LikeResponse:
+      type: object
+      properties:
+        liked:
+          type: boolean
+          example: true
+        total_likes:
+          type: integer
+          example: 124
+
+    RatingRequest:
+      type: object
+      required: [episode_id, score]
+      properties:
+        episode_id:
+          type: string
+          example: "episode_001"
+        score:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 4
+
+    CommentRequest:
+      type: object
+      required: [episode_id, text]
+      properties:
+        episode_id:
+          type: string
+          example: "episode_001"
+        text:
+          type: string
+          example: "Loved the cinematography!"
+
+    CommentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "cmt_f92a4d8b"
+        user_id:
+          type: string
+          example: "user_123"
+        episode_id:
+          type: string
+          example: "episode_001"
+        text:
+          type: string
+          example: "Loved the cinematography!"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-08-15T12:34:56Z"
+
+    # Admin moderation
+    ModerationReviewRequest:
+      type: object
+      required: [episode_id, decision]
+      properties:
+        episode_id:
+          type: string
+          example: "episode_001"
+        decision:
+          type: string
+          enum: [approve, reject]
+          example: "approve"
+        notes:
+          type: string
+          example: "Approved after content check."
+
+    ModerationReviewResponse:
+      type: object
+      properties:
+        episode_id:
+          type: string
+          example: "episode_001"
+        status:
+          type: string
+          example: "approved"
+        reviewed_by:
+          type: string
+          example: "admin_001"
+        reviewed_at:
+          type: string
+          format: date-time
+          example: "2025-08-15T13:45:00Z"
+
+  examples:
+    PhoneOtpSendExample:
+      value:
+        phone: "+919876543210"
+    PhoneOtpVerifyExample:
+      value:
+        phone: "+919876543210"
+        otp: "123456"
+
+paths:
+
+  #########################
+  # Auth (phone OTP)
+  #########################
+  /auth/otp/send:
+    post:
+      tags: [Auth]
+      summary: Send phone OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneOtpRequest'
+            examples:
+              phone:
+                $ref: '#/components/examples/PhoneOtpSendExample'
+      responses:
+        '200':
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhoneOtpSendResponse'
+              example:
+                txn_id: "otp_txn_8d92f3b6"
+                expires_in: 300
+                message: "OTP sent to +919876543210"
+        '400':
+          description: Invalid request
+
+  /auth/otp/verify:
+    post:
+      tags: [Auth]
+      summary: Verify phone OTP and obtain tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneOtpVerifyRequest'
+            examples:
+              verify:
+                $ref: '#/components/examples/PhoneOtpVerifyExample'
+      responses:
+        '200':
+          description: Tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                access_token: "eyJhbGciOiJIUzI1NiIsInR5..."
+                refresh_token: "rfrsh_4df92a...c9"
+                expires_in: 3600
+        '401':
+          description: Invalid OTP
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              refresh_token: "rfrsh_4df92a...c9"
+      responses:
+        '200':
+          description: New tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                access_token: "newAccessToken123"
+                refresh_token: "newRefreshToken123"
+                expires_in: 3600
+
+  #########################
+  # Creators
+  #########################
+  /creators/onboard:
+    post:
+      tags: [Creators]
+      summary: Creator onboarding (submit KYC/documents)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatorOnboardRequest'
+            example:
+              display_name: "Arjun Films"
+              bio: "Short films in Hindi & Marathi"
+              kyc_document_s3_path: "s3://uploads/kyc/kyc_doc_1234.jpg"
+      responses:
+        '201':
+          description: Creator profile created / pending KYC
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatorProfile'
+              example:
+                id: "9c8c42ee-4710-4a1d-83df-f17fd748f5a7"
+                user_id: "52ff0b94-1b74-42a5-a78c-baa8724b7cf1"
+                display_name: "Arjun Films"
+                bio: "Short films in Hindi & Marathi"
+                kyc_status: "pending"
+
+  /creators/{id}/dashboard:
+    get:
+      tags: [Creators]
+      summary: Creator analytics dashboard (basic)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "9c8c42ee-4710-4a1d-83df-f17fd748f5a7"
+      responses:
+        '200':
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatorDashboardResponse'
+              example:
+                views: 1245
+                watch_time_seconds: 456780
+                earnings: 1299.50
+
+  #########################
+  # Content
+  #########################
+  /content/series:
+    post:
+      tags: [Content]
+      summary: Create series (creator)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Series'
+            example:
+              title: "The Short Life"
+              synopsis: "A 5-episode short drama"
+              language: "hi"
+              category_tags: ["drama","shorts"]
+              price_type: "subscription"
+              price_amount: 99.00
+      responses:
+        '201':
+          description: Series created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Series'
+              example:
+                id: "series_123"
+                title: "The Short Life"
+                status: "draft"
+
+    get:
+      tags: [Content]
+      summary: List series (filters)
+      parameters:
+        - name: language
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Series list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 1
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Series'
+              example:
+                total: 1
+                items:
+                  - id: "series_123"
+                    title: "The Short Life"
+                    status: "published"
+
+  /content/series/{id}:
+    get:
+      tags: [Content]
+      summary: Get series details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "series_123"
+      responses:
+        '200':
+          description: Series details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Series'
+              example:
+                id: "series_123"
+                title: "The Short Life"
+                synopsis: "A 5-episode short drama"
+                language: "hi"
+                category_tags: ["drama","shorts"]
+                price_type: "subscription"
+                price_amount: 99.00
+                status: "published"
+
+    put:
+      tags: [Content]
+      summary: Update series (creator)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Series'
+      responses:
+        '200':
+          description: Series updated
+
+  /content/series/{id}/episodes:
+    post:
+      tags: [Content]
+      summary: Create episode metadata (no media)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "series_123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Episode'
+            example:
+              title: "Episode 1: The Train Ride"
+              episode_number: 1
+              duration_seconds: 300
+      responses:
+        '201':
+          description: Episode metadata created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Episode'
+              example:
+                id: "episode_001"
+                title: "Episode 1: The Train Ride"
+                status: "pending_upload"
+
+  /content/upload-url:
+    post:
+      tags: [Content]
+      summary: Request pre-signed upload URL for a master file
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadRequest'
+            example:
+              filename: "episode1_master.mp4"
+              content_type: "video/mp4"
+              size_bytes: 73400320
+              metadata:
+                series_id: "series_123"
+                episode_title: "Episode 1 - The Beginning"
+      responses:
+        '200':
+          description: Presigned upload URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+              example:
+                upload_id: "upl_94f3d82b"
+                presigned_url: "https://s3.amazonaws.com/bucket/upl_94f3d82b?AWSAccessKeyId=..."
+                expires_in: 3600
+                upload_headers:
+                  Content-Type: "video/mp4"
+        '403':
+          description: Forbidden (creator-only)
+
+  /content/uploads/{upload_id}/notify:
+    post:
+      tags: [Content]
+      summary: Notify backend upload finished (client calls after S3 upload)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: upload_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "upl_94f3d82b"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadNotifyRequest'
+            example:
+              s3_path: "s3://bucket/upl_94f3d82b/episode1_master.mp4"
+              size_bytes: 73400320
+      responses:
+        '202':
+          description: Accepted - job queued for transcoding
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadNotifyResponse'
+              example:
+                status: "queued_for_transcoding"
+
+  /episodes/{id}/manifest:
+    get:
+      tags: [Content]
+      summary: Get signed HLS manifest URL for playback (authorization enforced)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "episode_001"
+      responses:
+        '200':
+          description: Signed manifest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManifestResponse'
+              example:
+                manifest_url: "https://cdn.streamshort.com/hls/episode1/index.m3u8?Expires=1723598700&Signature=..."
+                expires_at: "2025-08-15T12:00:00Z"
+        '403':
+          description: Not authorized (subscription missing)
+
+  #########################
+  # Payments
+  #########################
+  /payments/create-subscription:
+    post:
+      tags: [Payments]
+      summary: Create subscription intent (initiates Razorpay subscription flow)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+            example:
+              user_id: "52ff0b94-1b74-42a5-a78c-baa8724b7cf1"
+              target_type: "series"
+              target_id: "series_123"
+              plan_id: "plan_J2Wf5A9tD6a1Xy"
+      responses:
+        '200':
+          description: Subscription intent (Razorpay details)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCreateResponse'
+              example:
+                razorpay_order_id: "order_J2WhZB6t8D6b7Q"
+                razorpay_subscription_id: "sub_J2WhxVd5jM3lNw"
+                subscription_id: "sub_9f35a4e6"
+                checkout_url: "https://checkout.razorpay.com/v1/checkout.js?order_id=order_J2WhZB6t8D6b7Q"
+
+  /payments/webhook:
+    post:
+      tags: [Payments]
+      summary: Razorpay webhook receiver
+      description: Webhook endpoint to receive Razorpay events. Validate X-Razorpay-Signature header.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentWebhookPayload'
+            example:
+              event: "subscription.charged"
+              payload:
+                payment:
+                  entity:
+                    id: "pay_FZlOZf3R8xWQyq"
+                    amount: 19900
+                    currency: "INR"
+                    status: "captured"
+      security:
+        - razorpayWebhook: []
+      responses:
+        '200':
+          description: OK (processed)
+          content:
+            application/json:
+              example:
+                success: true
+
+  #########################
+  # Engagement
+  #########################
+  /episodes/{id}/like:
+    post:
+      tags: [Engagement]
+      summary: Like/unlike an episode (toggle)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "episode_001"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LikeRequest'
+            example:
+              episode_id: "episode_001"
+      responses:
+        '200':
+          description: Like state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
+              example:
+                liked: true
+                total_likes: 124
+
+  /episodes/{id}/rating:
+    post:
+      tags: [Engagement]
+      summary: Submit rating for an episode
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "episode_001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingRequest'
+            example:
+              episode_id: "episode_001"
+              score: 4
+      responses:
+        '201':
+          description: Rating saved
+          content:
+            application/json:
+              example:
+                rating: 4
+                average_rating: 4.2
+
+  /episodes/{id}/comments:
+    get:
+      tags: [Engagement]
+      summary: List comments for an episode
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "episode_001"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Comments list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 2
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CommentResponse'
+              example:
+                total: 2
+                items:
+                  - id: "cmt_001"
+                    user_id: "user_123"
+                    episode_id: "episode_001"
+                    text: "Loved the cinematography!"
+                    created_at: "2025-08-15T12:34:56Z"
+                  - id: "cmt_002"
+                    user_id: "user_456"
+                    episode_id: "episode_001"
+                    text: "Can't wait for the next one!"
+                    created_at: "2025-08-15T13:20:00Z"
+
+    post:
+      tags: [Engagement]
+      summary: Post a comment on an episode
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "episode_001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+            example:
+              episode_id: "episode_001"
+              text: "Great episode!"
+      responses:
+        '201':
+          description: Comment posted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentResponse'
+              example:
+                id: "cmt_f92a4d8b"
+                user_id: "user_123"
+                episode_id: "episode_001"
+                text: "Great episode!"
+                created_at: "2025-08-15T12:34:56Z"
+
+  #########################
+  # Admin
+  #########################
+  /admin/uploads/pending:
+    get:
+      tags: [Admin]
+      summary: List pending uploads for moderation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            default: "pending"
+      responses:
+        '200':
+          description: Pending uploads
+          content:
+            application/json:
+              example:
+                uploads:
+                  - upload_id: "upl_94f3d82b"
+                    creator_id: "creator_123"
+                    s3_path: "s3://bucket/upl_94f3d82b/episode1_master.mp4"
+                    detected_issues: ["faces", "possible copyrighted material"]
+
+  /admin/approve-content:
+    post:
+      tags: [Admin]
+      summary: Admin approve/reject content
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationReviewRequest'
+            example:
+              episode_id: "episode_001"
+              decision: "approve"
+              notes: "Approved after manual review"
+      responses:
+        '200':
+          description: Moderation decision applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationReviewResponse'
+              example:
+                episode_id: "episode_001"
+                status: "approved"
+                reviewed_by: "admin_001"
+                reviewed_at: "2025-08-15T13:45:00Z"
+
