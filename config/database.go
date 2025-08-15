@@ -45,6 +45,6 @@ func InitDB() *gorm.DB {
 		log.Fatal("Failed to auto-migrate database:", err)
 	}
 
-	log.Println("Database connected and auto-migrated successfully")
+	log.Println("Database connected and auto-migrated successfully.")
 	return db
 }
