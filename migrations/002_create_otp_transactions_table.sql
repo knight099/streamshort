@@ -3,7 +3,7 @@
 -- Created: 2025-08-15
 
 CREATE TABLE IF NOT EXISTS otp_transactions (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     txn_id VARCHAR(50) NOT NULL UNIQUE,
     phone VARCHAR(20) NOT NULL,
     otp VARCHAR(10) NOT NULL,

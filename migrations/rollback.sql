@@ -7,7 +7,10 @@
 -- Start transaction
 BEGIN;
 
--- Drop tables in reverse order (due to foreign key constraints)
+-- Drop all tables (due to foreign key constraints)
+DROP TABLE IF EXISTS creator_analytics CASCADE;
+DROP TABLE IF EXISTS payout_details CASCADE;
+DROP TABLE IF EXISTS creator_profiles CASCADE;
 DROP TABLE IF EXISTS refresh_tokens CASCADE;
 DROP TABLE IF EXISTS otp_transactions CASCADE;
 DROP TABLE IF EXISTS users CASCADE;

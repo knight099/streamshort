@@ -1,9 +1,10 @@
 package config
 
 import (
-	"database/sql"
 	"log"
 	"os"
+
+	"streamshort/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -30,27 +31,20 @@ func InitDB() *gorm.DB {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Get underlying sql.DB for migrations
-	sqlDB, err := db.DB()
+	// Auto-migrate all models (automatically creates/updates tables)
+	log.Println("Running database auto-migration...")
+	err = db.AutoMigrate(
+		&models.User{},
+		&models.OTPTransaction{},
+		&models.RefreshToken{},
+		&models.CreatorProfile{},
+		&models.PayoutDetails{},
+		&models.CreatorAnalytics{},
+	)
 	if err != nil {
-		log.Fatal("Failed to get underlying sql.DB:", err)
+		log.Fatal("Failed to auto-migrate database:", err)
 	}
 
-	// Run migrations using our migration runner
-	if err := runMigrations(sqlDB); err != nil {
-		log.Fatal("Failed to run migrations:", err)
-	}
-
-	log.Println("Database connected and migrated successfully")
+	log.Println("Database connected and auto-migrated successfully")
 	return db
-}
-
-func runMigrations(sqlDB *sql.DB) error {
-	// Import migrations package here to avoid circular dependency
-	// This is a simple approach - in production you might want to use a proper migration tool
-	log.Println("Running database migrations...")
-
-	// For now, we'll use GORM's AutoMigrate as a fallback
-	// In production, you should use the migration runner
-	return nil
 }

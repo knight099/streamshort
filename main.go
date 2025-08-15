@@ -31,6 +31,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db)
+	creatorHandler := handlers.NewCreatorHandler(db)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware()
@@ -67,6 +68,12 @@ func main() {
 		json.NewEncoder(w).Encode(response)
 	}).Methods("GET")
 
+	// Creator routes (protected)
+	protected.HandleFunc("/creators/profile", creatorHandler.GetCreatorProfile).Methods("GET")
+	protected.HandleFunc("/creators/profile", creatorHandler.UpdateCreatorProfile).Methods("PUT")
+	protected.HandleFunc("/creators/onboard", creatorHandler.OnboardCreator).Methods("POST")
+	protected.HandleFunc("/creators/{id}/dashboard", creatorHandler.GetCreatorDashboard).Methods("GET")
+
 	// CORS configuration
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -85,6 +92,10 @@ func main() {
 	log.Println("  POST /auth/otp/verify     - Verify OTP")
 	log.Println("  POST /auth/refresh        - Refresh token")
 	log.Println("  GET  /api/profile         - Protected profile (requires auth)")
+	log.Println("  POST /api/creators/onboard     - Creator onboarding (requires auth)")
+	log.Println("  GET  /api/creators/profile      - Get creator profile (requires auth)")
+	log.Println("  PUT  /api/creators/profile      - Update creator profile (requires auth)")
+	log.Println("  GET  /api/creators/{id}/dashboard - Creator dashboard (requires auth)")
 
 	log.Fatal(http.ListenAndServe(":8080", handler))
 }

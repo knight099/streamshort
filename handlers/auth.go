@@ -51,7 +51,7 @@ type RefreshRequest struct {
 
 // JWT Claims
 type Claims struct {
-	UserID uint   `json:"user_id"`
+	UserID string `json:"user_id"`
 	Phone  string `json:"phone"`
 	jwt.RegisteredClaims
 }
@@ -247,7 +247,7 @@ func (h *AuthHandler) generateAccessToken(user models.User) (string, error) {
 	return token.SignedString([]byte(JWTSecret))
 }
 
-func (h *AuthHandler) generateRefreshToken(userID uint) (string, error) {
+func (h *AuthHandler) generateRefreshToken(userID string) (string, error) {
 	token := "rfrsh_" + uuid.New().String()
 
 	refreshToken := models.RefreshToken{
