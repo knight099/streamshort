@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"streamshort/config"
 	"streamshort/handlers"
 	"streamshort/middleware"
@@ -97,7 +98,13 @@ func main() {
 	// Apply CORS middleware
 	handler := c.Handler(r)
 
-	log.Println("Server starting on port 8080...")
+	// Get port from environment variable or use default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("Server starting on port %s...", port)
 	log.Println("Available endpoints:")
 	log.Println("  GET  /                    - Hello World")
 	log.Println("  GET  /health              - Health check")
@@ -109,6 +116,9 @@ func main() {
 	log.Println("  GET  /api/creators/profile      - Get creator profile (requires auth)")
 	log.Println("  PUT  /api/creators/profile      - Update creator profile (requires auth)")
 	log.Println("  GET  /api/creators/{id}/dashboard - Creator dashboard (requires auth)")
+	log.Println("  POST /api/content/series        - Create series (requires auth)")
+	log.Println("  GET  /content/series            - List series (public)")
+	log.Println("  GET  /content/series/{id}       - Get series details (public)")
 
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	log.Fatal(http.ListenAndServe(":"+port, handler))
 }
