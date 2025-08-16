@@ -32,6 +32,7 @@ func main() {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db)
 	creatorHandler := handlers.NewCreatorHandler(db)
+	contentHandler := handlers.NewContentHandler(db)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware()
@@ -45,6 +46,10 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(Response{Message: "Server is running!"})
 	}).Methods("GET")
+
+	// Public content routes
+	r.HandleFunc("/content/series", contentHandler.ListSeries).Methods("GET")
+	r.HandleFunc("/content/series/{id}", contentHandler.GetSeries).Methods("GET")
 
 	// Auth routes (matching OpenAPI schema)
 	r.HandleFunc("/auth/otp/send", authHandler.SendOTP).Methods("POST")
@@ -73,6 +78,14 @@ func main() {
 	protected.HandleFunc("/creators/profile", creatorHandler.UpdateCreatorProfile).Methods("PUT")
 	protected.HandleFunc("/creators/onboard", creatorHandler.OnboardCreator).Methods("POST")
 	protected.HandleFunc("/creators/{id}/dashboard", creatorHandler.GetCreatorDashboard).Methods("GET")
+
+	// Content routes (protected)
+	protected.HandleFunc("/content/series", contentHandler.CreateSeries).Methods("POST")
+	protected.HandleFunc("/content/series/{id}", contentHandler.UpdateSeries).Methods("PUT")
+	protected.HandleFunc("/content/series/{id}/episodes", contentHandler.CreateEpisode).Methods("POST")
+	protected.HandleFunc("/content/upload-url", contentHandler.RequestUploadURL).Methods("POST")
+	protected.HandleFunc("/content/uploads/{upload_id}/notify", contentHandler.NotifyUploadComplete).Methods("POST")
+	protected.HandleFunc("/episodes/{id}/manifest", contentHandler.GetEpisodeManifest).Methods("GET")
 
 	// CORS configuration
 	c := cors.New(cors.Options{

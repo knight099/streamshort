@@ -40,6 +40,9 @@ func InitDB() *gorm.DB {
 		&models.CreatorProfile{},
 		&models.PayoutDetails{},
 		&models.CreatorAnalytics{},
+		&models.Series{},
+		&models.Episode{},
+		&models.UploadRequest{},
 	)
 	if err != nil {
 		log.Fatal("Failed to auto-migrate database:", err)
