@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -13,7 +14,7 @@ type Series struct {
 	Title        string         `json:"title" gorm:"not null"`
 	Synopsis     string         `json:"synopsis" gorm:"not null"`
 	Language     string         `json:"language" gorm:"not null"`
-	CategoryTags []string       `json:"category_tags" gorm:"type:text[]"`
+	CategoryTags pq.StringArray `json:"category_tags" gorm:"type:text[]"`
 	PriceType    string         `json:"price_type" gorm:"type:varchar(20);check:price_type IN ('free', 'subscription', 'one_time')"`
 	PriceAmount  *float64       `json:"price_amount" gorm:"type:decimal(10,2)"`
 	ThumbnailURL *string        `json:"thumbnail_url"`

@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -121,7 +122,7 @@ func (h *ContentHandler) CreateSeries(w http.ResponseWriter, r *http.Request) {
 		Title:        req.Title,
 		Synopsis:     req.Synopsis,
 		Language:     req.Language,
-		CategoryTags: req.CategoryTags,
+		CategoryTags: pq.StringArray(req.CategoryTags),
 		PriceType:    req.PriceType,
 		PriceAmount:  req.PriceAmount,
 		ThumbnailURL: req.ThumbnailURL,
@@ -256,7 +257,7 @@ func (h *ContentHandler) UpdateSeries(w http.ResponseWriter, r *http.Request) {
 		updates["language"] = *req.Language
 	}
 	if req.CategoryTags != nil {
-		updates["category_tags"] = *req.CategoryTags
+		updates["category_tags"] = pq.StringArray(*req.CategoryTags)
 	}
 	if req.PriceType != nil {
 		updates["price_type"] = *req.PriceType

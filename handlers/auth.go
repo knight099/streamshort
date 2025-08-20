@@ -128,6 +128,7 @@ func (h *AuthHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find OTP transaction
+	// phone := "+91" + req.Phone
 	var otpTx models.OTPTransaction
 	if err := h.db.Where("phone = ? AND otp = ? AND used = ?",
 		req.Phone, req.OTP, false).First(&otpTx).Error; err != nil {
