@@ -129,8 +129,8 @@ func (h *AuthHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 
 	// Find OTP transaction
 	var otpTx models.OTPTransaction
-	if err := h.db.Where("phone = ? AND otp = ? AND used = ? AND expires_at > ?",
-		req.Phone, req.OTP, false, time.Now()).First(&otpTx).Error; err != nil {
+	if err := h.db.Where("phone = ? AND otp = ? AND used = ?",
+		req.Phone, req.OTP, false).First(&otpTx).Error; err != nil {
 		http.Error(w, "Invalid OTP", http.StatusUnauthorized)
 		return
 	}

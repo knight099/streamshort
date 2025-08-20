@@ -10,6 +10,7 @@ import (
 	"streamshort/middleware"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 )
 
@@ -27,6 +28,13 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// Load environment variables from files for local development
+	// .env.local (if present) overrides .env
+	if err := godotenv.Load(".env.local"); err == nil {
+		log.Println("Loaded environment from .env.local")
+	}
+	_ = godotenv.Load() // ignore if .env is missing
+
 	// Initialize database
 	db := config.InitDB()
 
@@ -34,6 +42,9 @@ func main() {
 	authHandler := handlers.NewAuthHandler(db)
 	creatorHandler := handlers.NewCreatorHandler(db)
 	contentHandler := handlers.NewContentHandler(db)
+	paymentHandler := handlers.NewPaymentHandler()
+	socialHandler := handlers.NewSocialHandler(db)
+	adminHandler := handlers.NewAdminHandler()
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware()
@@ -48,9 +59,12 @@ func main() {
 		json.NewEncoder(w).Encode(Response{Message: "Server is running!"})
 	}).Methods("GET")
 
-	// Public content routes
+	// Public content routes (no authentication required)
 	r.HandleFunc("/content/series", contentHandler.ListSeries).Methods("GET")
 	r.HandleFunc("/content/series/{id}", contentHandler.GetSeries).Methods("GET")
+
+	// Public payment webhook (no authentication required)
+	r.HandleFunc("/payments/webhook", paymentHandler.Webhook).Methods("POST")
 
 	// Auth routes (matching OpenAPI schema)
 	r.HandleFunc("/auth/otp/send", authHandler.SendOTP).Methods("POST")
@@ -80,13 +94,25 @@ func main() {
 	protected.HandleFunc("/creators/onboard", creatorHandler.OnboardCreator).Methods("POST")
 	protected.HandleFunc("/creators/{id}/dashboard", creatorHandler.GetCreatorDashboard).Methods("GET")
 
-	// Content routes (protected)
+	// Content routes (protected - creators only)
 	protected.HandleFunc("/content/series", contentHandler.CreateSeries).Methods("POST")
 	protected.HandleFunc("/content/series/{id}", contentHandler.UpdateSeries).Methods("PUT")
 	protected.HandleFunc("/content/series/{id}/episodes", contentHandler.CreateEpisode).Methods("POST")
 	protected.HandleFunc("/content/upload-url", contentHandler.RequestUploadURL).Methods("POST")
 	protected.HandleFunc("/content/uploads/{upload_id}/notify", contentHandler.NotifyUploadComplete).Methods("POST")
 	protected.HandleFunc("/episodes/{id}/manifest", contentHandler.GetEpisodeManifest).Methods("GET")
+
+	// Payment routes (protected)
+	protected.HandleFunc("/payments/create-subscription", paymentHandler.CreateSubscription).Methods("POST")
+
+	// Social/Engagement routes (protected)
+	protected.HandleFunc("/episodes/{id}/like", socialHandler.LikeEpisode).Methods("POST")
+	protected.HandleFunc("/episodes/{id}/rating", socialHandler.RateEpisode).Methods("POST")
+	protected.HandleFunc("/episodes/{id}/comments", socialHandler.CommentEpisode).Methods("POST")
+
+	// Admin routes (protected - admin only)
+	protected.HandleFunc("/admin/uploads/pending", adminHandler.GetPendingUploads).Methods("GET")
+	protected.HandleFunc("/admin/approve-content", adminHandler.ApproveContent).Methods("POST")
 
 	// CORS configuration
 	c := cors.New(cors.Options{
@@ -116,9 +142,21 @@ func main() {
 	log.Println("  GET  /api/creators/profile      - Get creator profile (requires auth)")
 	log.Println("  PUT  /api/creators/profile      - Update creator profile (requires auth)")
 	log.Println("  GET  /api/creators/{id}/dashboard - Creator dashboard (requires auth)")
-	log.Println("  POST /api/content/series        - Create series (requires auth)")
+	log.Println("  POST /api/content/series        - Create series (creators only)")
+	log.Println("  PUT  /api/content/series/{id}   - Update series (creators only)")
+	log.Println("  POST /api/content/series/{id}/episodes - Create episode (creators only)")
+	log.Println("  POST /api/content/upload-url    - Request upload URL (creators only)")
+	log.Println("  POST /api/content/uploads/{id}/notify - Notify upload complete (creators only)")
+	log.Println("  GET  /api/episodes/{id}/manifest - Get episode manifest (requires auth)")
+	log.Println("  POST /api/payments/create-subscription - Create subscription (requires auth)")
+	log.Println("  POST /api/episodes/{id}/like    - Like/unlike episode (requires auth)")
+	log.Println("  POST /api/episodes/{id}/rating  - Rate episode (requires auth)")
+	log.Println("  POST /api/episodes/{id}/comments - Comment on episode (requires auth)")
+	log.Println("  GET  /api/admin/uploads/pending - List pending uploads (admin only)")
+	log.Println("  POST /api/admin/approve-content - Approve/reject content (admin only)")
 	log.Println("  GET  /content/series            - List series (public)")
 	log.Println("  GET  /content/series/{id}       - Get series details (public)")
+	log.Println("  POST /payments/webhook          - Payment webhook (public)")
 
 	log.Fatal(http.ListenAndServe(":"+port, handler))
 }

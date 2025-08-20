@@ -8,7 +8,7 @@ import (
 
 type User struct {
 	ID        string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	Phone     string         `json:"phone" gorm:"uniqueIndex;not null"`
+	Phone     string         `json:"phone" gorm:"not null;index:idx_users_phone,unique"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
@@ -19,7 +19,7 @@ type User struct {
 
 type OTPTransaction struct {
 	ID        string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	TxnID     string         `json:"txn_id" gorm:"uniqueIndex;not null"`
+	TxnID     string         `json:"txn_id" gorm:"not null;index:idx_otp_transactions_txn_id,unique"`
 	Phone     string         `json:"phone" gorm:"not null"`
 	OTP       string         `json:"otp" gorm:"not null"`
 	ExpiresAt time.Time      `json:"expires_at" gorm:"not null"`
@@ -31,7 +31,7 @@ type OTPTransaction struct {
 
 type RefreshToken struct {
 	ID        string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	Token     string         `json:"token" gorm:"uniqueIndex;not null"`
+	Token     string         `json:"token" gorm:"not null;index:idx_refresh_tokens_token,unique"`
 	UserID    string         `json:"user_id" gorm:"not null;type:uuid"`
 	ExpiresAt time.Time      `json:"expires_at" gorm:"not null"`
 	Revoked   bool           `json:"revoked" gorm:"default:false"`
