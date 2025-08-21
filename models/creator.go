@@ -20,7 +20,7 @@ type CreatorProfile struct {
 	DeletedAt       gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relationships
-	User User `json:"user" gorm:"foreignKey:UserID"`
+	User *User `json:"user" gorm:"foreignKey:UserID"`
 }
 
 type PayoutDetails struct {

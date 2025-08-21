@@ -24,8 +24,8 @@ type Series struct {
 	DeletedAt    gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relationships
-	Creator  CreatorProfile `json:"creator" gorm:"foreignKey:CreatorID"`
-	Episodes []Episode      `json:"episodes" gorm:"foreignKey:SeriesID"`
+	Creator  *CreatorProfile `json:"creator" gorm:"foreignKey:CreatorID"`
+	Episodes []Episode       `json:"episodes" gorm:"foreignKey:SeriesID"`
 }
 
 // Episode represents a single episode in a series

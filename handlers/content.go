@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"streamshort/models"
@@ -51,9 +52,36 @@ type CreateEpisodeRequest struct {
 	DurationSeconds int    `json:"duration_seconds"`
 }
 
+type SeriesListItem struct {
+	ID           string         `json:"id"`
+	CreatorID    string         `json:"creator_id"`
+	CreatorName  *string        `json:"creator_name"`
+	Title        string         `json:"title"`
+	Synopsis     string         `json:"synopsis"`
+	Language     string         `json:"language"`
+	CategoryTags pq.StringArray `json:"category_tags"`
+	PriceType    string         `json:"price_type"`
+	PriceAmount  *float64       `json:"price_amount"`
+	ThumbnailURL *string        `json:"thumbnail_url"`
+	Status       string         `json:"status"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	Episodes     []EpisodeBrief `json:"episodes"`
+}
+
+type EpisodeBrief struct {
+	ID              string     `json:"id"`
+	Title           string     `json:"title"`
+	EpisodeNumber   int        `json:"episode_number"`
+	DurationSeconds int        `json:"duration_seconds"`
+	ThumbURL        *string    `json:"thumb_url"`
+	PublishedAt     *time.Time `json:"published_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+}
+
 type SeriesListResponse struct {
-	Total int64           `json:"total"`
-	Items []models.Series `json:"items"`
+	Total int64            `json:"total"`
+	Items []SeriesListItem `json:"items"`
 }
 
 type UploadUrlRequest struct {
@@ -164,7 +192,9 @@ func (h *ContentHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build query
-	query := h.db.Model(&models.Series{}).Where("status = ?", "published")
+	query := h.db.Model(&models.Series{}).Where("status = ?", "published").
+		Preload("Creator").
+		Preload("Episodes", "status = ?", "published")
 
 	if language != "" {
 		query = query.Where("language = ?", language)
@@ -179,16 +209,54 @@ func (h *ContentHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 	query.Count(&total)
 
 	// Get paginated results
-	var series []models.Series
+	var seriesRows []models.Series
 	offset := (page - 1) * perPage
-	if err := query.Offset(offset).Limit(perPage).Find(&series).Error; err != nil {
+	if err := query.Offset(offset).Limit(perPage).Find(&seriesRows).Error; err != nil {
 		http.Error(w, "Failed to fetch series", http.StatusInternalServerError)
 		return
 	}
 
+	items := make([]SeriesListItem, 0, len(seriesRows))
+	for _, s := range seriesRows {
+		var creatorName *string
+		if s.Creator != nil {
+			creatorName = &s.Creator.DisplayName
+		}
+
+		eps := make([]EpisodeBrief, 0, len(s.Episodes))
+		for _, ep := range s.Episodes {
+			eps = append(eps, EpisodeBrief{
+				ID:              ep.ID,
+				Title:           ep.Title,
+				EpisodeNumber:   ep.EpisodeNumber,
+				DurationSeconds: ep.DurationSeconds,
+				ThumbURL:        ep.ThumbURL,
+				PublishedAt:     ep.PublishedAt,
+				CreatedAt:       ep.CreatedAt,
+			})
+		}
+
+		items = append(items, SeriesListItem{
+			ID:           s.ID,
+			CreatorID:    s.CreatorID,
+			CreatorName:  creatorName,
+			Title:        s.Title,
+			Synopsis:     s.Synopsis,
+			Language:     s.Language,
+			CategoryTags: s.CategoryTags,
+			PriceType:    s.PriceType,
+			PriceAmount:  s.PriceAmount,
+			ThumbnailURL: s.ThumbnailURL,
+			Status:       s.Status,
+			CreatedAt:    s.CreatedAt,
+			UpdatedAt:    s.UpdatedAt,
+			Episodes:     eps,
+		})
+	}
+
 	response := SeriesListResponse{
 		Total: total,
-		Items: series,
+		Items: items,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -201,7 +269,7 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	seriesID := vars["id"]
 
 	var series models.Series
-	if err := h.db.Preload("Creator").Preload("Episodes").Where("id = ?", seriesID).First(&series).Error; err != nil {
+	if err := h.db.Preload("Creator").Preload("Episodes", "status = ?", "published").Where("id = ?", seriesID).First(&series).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			http.Error(w, "Series not found", http.StatusNotFound)
 			return
@@ -210,8 +278,60 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	type SeriesDetailResponse struct {
+		ID           string         `json:"id"`
+		CreatorID    string         `json:"creator_id"`
+		CreatorName  *string        `json:"creator_name"`
+		Title        string         `json:"title"`
+		Synopsis     string         `json:"synopsis"`
+		Language     string         `json:"language"`
+		CategoryTags pq.StringArray `json:"category_tags"`
+		PriceType    string         `json:"price_type"`
+		PriceAmount  *float64       `json:"price_amount"`
+		ThumbnailURL *string        `json:"thumbnail_url"`
+		Status       string         `json:"status"`
+		CreatedAt    time.Time      `json:"created_at"`
+		UpdatedAt    time.Time      `json:"updated_at"`
+		Episodes     []EpisodeBrief `json:"episodes"`
+	}
+
+	var creatorName *string
+	if series.Creator != nil {
+		creatorName = &series.Creator.DisplayName
+	}
+
+	eps := make([]EpisodeBrief, 0, len(series.Episodes))
+	for _, ep := range series.Episodes {
+		eps = append(eps, EpisodeBrief{
+			ID:              ep.ID,
+			Title:           ep.Title,
+			EpisodeNumber:   ep.EpisodeNumber,
+			DurationSeconds: ep.DurationSeconds,
+			ThumbURL:        ep.ThumbURL,
+			PublishedAt:     ep.PublishedAt,
+			CreatedAt:       ep.CreatedAt,
+		})
+	}
+
+	resp := SeriesDetailResponse{
+		ID:           series.ID,
+		CreatorID:    series.CreatorID,
+		CreatorName:  creatorName,
+		Title:        series.Title,
+		Synopsis:     series.Synopsis,
+		Language:     series.Language,
+		CategoryTags: series.CategoryTags,
+		PriceType:    series.PriceType,
+		PriceAmount:  series.PriceAmount,
+		ThumbnailURL: series.ThumbnailURL,
+		Status:       series.Status,
+		CreatedAt:    series.CreatedAt,
+		UpdatedAt:    series.UpdatedAt,
+		Episodes:     eps,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(series)
+	json.NewEncoder(w).Encode(resp)
 }
 
 // UpdateSeries updates a series
@@ -493,6 +613,453 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 	response := ManifestResponse{
 		ManifestURL: fmt.Sprintf("https://cdn.streamshort.com/hls/%s/index.m3u8?Expires=%d&Signature=mock", episodeID, time.Now().Add(1*time.Hour).Unix()),
 		ExpiresAt:   time.Now().Add(1 * time.Hour),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// CreatorContentResponse represents the response for creator's content
+type CreatorContentResponse struct {
+	Series []CreatorSeriesResponse `json:"series"`
+	Total  int64                   `json:"total"`
+}
+
+// CreatorSeriesResponse represents a series with its episodes for creator view
+type CreatorSeriesResponse struct {
+	ID           string                   `json:"id"`
+	Title        string                   `json:"title"`
+	Synopsis     string                   `json:"synopsis"`
+	Language     string                   `json:"language"`
+	CategoryTags pq.StringArray           `json:"category_tags"`
+	PriceType    string                   `json:"price_type"`
+	PriceAmount  *float64                 `json:"price_amount"`
+	ThumbnailURL *string                  `json:"thumbnail_url"`
+	Status       string                   `json:"status"`
+	CreatedAt    time.Time                `json:"created_at"`
+	UpdatedAt    time.Time                `json:"updated_at"`
+	Episodes     []CreatorEpisodeResponse `json:"episodes"`
+	EpisodeCount int64                    `json:"episode_count"`
+}
+
+// CreatorEpisodeResponse represents an episode for creator view
+type CreatorEpisodeResponse struct {
+	ID              string     `json:"id"`
+	Title           string     `json:"title"`
+	EpisodeNumber   int        `json:"episode_number"`
+	DurationSeconds int        `json:"duration_seconds"`
+	Status          string     `json:"status"`
+	PublishedAt     *time.Time `json:"published_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+// GetCreatorContent fetches all series and episodes created by the authenticated creator
+func (h *ContentHandler) GetCreatorContent(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context (set by auth middleware)
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if user is a creator
+	var creatorProfile models.CreatorProfile
+	if err := h.db.Where("user_id = ?", userID).First(&creatorProfile).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "User must be onboarded as a creator first", http.StatusForbidden)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Get all series created by this creator
+	var series []models.Series
+	if err := h.db.Where("creator_id = ?", creatorProfile.ID).Find(&series).Error; err != nil {
+		http.Error(w, "Failed to fetch series", http.StatusInternalServerError)
+		return
+	}
+
+	// Build response with episodes for each series
+	var response CreatorContentResponse
+	response.Series = make([]CreatorSeriesResponse, 0, len(series))
+
+	for _, s := range series {
+		// Get episodes for this series
+		var episodes []models.Episode
+		if err := h.db.Where("series_id = ?", s.ID).Order("episode_number").Find(&episodes).Error; err != nil {
+			http.Error(w, "Failed to fetch episodes for series", http.StatusInternalServerError)
+			return
+		}
+
+		// Convert episodes to response format
+		episodeResponses := make([]CreatorEpisodeResponse, 0, len(episodes))
+		for _, ep := range episodes {
+			episodeResponses = append(episodeResponses, CreatorEpisodeResponse{
+				ID:              ep.ID,
+				Title:           ep.Title,
+				EpisodeNumber:   ep.EpisodeNumber,
+				DurationSeconds: ep.DurationSeconds,
+				Status:          ep.Status,
+				PublishedAt:     ep.PublishedAt,
+				CreatedAt:       ep.CreatedAt,
+				UpdatedAt:       ep.UpdatedAt,
+			})
+		}
+
+		// Convert series to response format
+		seriesResponse := CreatorSeriesResponse{
+			ID:           s.ID,
+			Title:        s.Title,
+			Synopsis:     s.Synopsis,
+			Language:     s.Language,
+			CategoryTags: s.CategoryTags,
+			PriceType:    s.PriceType,
+			PriceAmount:  s.PriceAmount,
+			ThumbnailURL: s.ThumbnailURL,
+			Status:       s.Status,
+			CreatedAt:    s.CreatedAt,
+			UpdatedAt:    s.UpdatedAt,
+			Episodes:     episodeResponses,
+			EpisodeCount: int64(len(episodeResponses)),
+		}
+
+		response.Series = append(response.Series, seriesResponse)
+	}
+
+	response.Total = int64(len(response.Series))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+type UpdateEpisodeStatusRequest struct {
+	Status string `json:"status"`
+}
+
+// UpdateEpisodeStatus allows the creator to update the status of an episode
+func (h *ContentHandler) UpdateEpisodeStatus(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	episodeID := vars["id"]
+
+	// Get user ID from context (set by auth middleware)
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	// Verify ownership: episode belongs to a series owned by this creator
+	var episode models.Episode
+	if err := h.db.Joins("JOIN series ON episodes.series_id = series.id").
+		Joins("JOIN creator_profiles ON series.creator_id = creator_profiles.id").
+		Where("episodes.id = ? AND creator_profiles.user_id = ?", episodeID, userID).
+		First(&episode).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Episode not found or access denied", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	var req UpdateEpisodeStatusRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Status == "" {
+		http.Error(w, "status is required", http.StatusBadRequest)
+		return
+	}
+
+	// Normalize and validate status
+	status := strings.ToLower(req.Status)
+	if status == "publish" {
+		status = "published"
+	}
+	allowed := map[string]bool{
+		"pending_upload":   true,
+		"queued_transcode": true,
+		"ready":            true,
+		"published":        true,
+	}
+	if !allowed[status] {
+		http.Error(w, "invalid status", http.StatusBadRequest)
+		return
+	}
+
+	updates := map[string]interface{}{
+		"status":     status,
+		"updated_at": time.Now(),
+	}
+	if status == "published" {
+		now := time.Now()
+		updates["published_at"] = &now
+	}
+
+	if err := h.db.Model(&episode).Updates(updates).Error; err != nil {
+		http.Error(w, "Failed to update episode status", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Episode status updated successfully",
+		"id":      episode.ID,
+		"status":  status,
+	})
+}
+
+type UpdateSeriesStatusRequest struct {
+	Status string `json:"status"`
+}
+
+// UpdateSeriesStatus allows the creator to update the status of a series
+func (h *ContentHandler) UpdateSeriesStatus(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	seriesID := vars["id"]
+
+	// Get user ID from context (set by auth middleware)
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	// Verify ownership: series belongs to this creator
+	var series models.Series
+	if err := h.db.Joins("JOIN creator_profiles ON series.creator_id = creator_profiles.id").
+		Where("series.id = ? AND creator_profiles.user_id = ?", seriesID, userID).
+		First(&series).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Series not found or access denied", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	var req UpdateSeriesStatusRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Status == "" {
+		http.Error(w, "status is required", http.StatusBadRequest)
+		return
+	}
+
+	// Normalize and validate status
+	status := strings.ToLower(req.Status)
+	if status == "publish" {
+		status = "published"
+	}
+	allowed := map[string]bool{
+		"draft":     true,
+		"published": true,
+	}
+	if !allowed[status] {
+		http.Error(w, "invalid status", http.StatusBadRequest)
+		return
+	}
+
+	updates := map[string]interface{}{
+		"status":     status,
+		"updated_at": time.Now(),
+	}
+
+	if err := h.db.Model(&series).Updates(updates).Error; err != nil {
+		http.Error(w, "Failed to update series status", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Series status updated successfully",
+		"id":      series.ID,
+		"status":  status,
+	})
+}
+
+type UpdateEpisodeRequest struct {
+	Title           *string `json:"title"`
+	EpisodeNumber   *int    `json:"episode_number"`
+	DurationSeconds *int    `json:"duration_seconds"`
+}
+
+// UpdateEpisode allows the creator to edit episode metadata (title, number, duration)
+func (h *ContentHandler) UpdateEpisode(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	episodeID := vars["id"]
+
+	// Get user ID from context
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	// Load episode and verify ownership via series -> creator_profiles
+	var episode models.Episode
+	if err := h.db.Joins("JOIN series ON episodes.series_id = series.id").
+		Joins("JOIN creator_profiles ON series.creator_id = creator_profiles.id").
+		Where("episodes.id = ? AND creator_profiles.user_id = ?", episodeID, userID).
+		First(&episode).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Episode not found or access denied", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	var req UpdateEpisodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	updates := make(map[string]interface{})
+	if req.Title != nil {
+		updates["title"] = *req.Title
+	}
+	if req.DurationSeconds != nil {
+		if *req.DurationSeconds <= 0 {
+			http.Error(w, "duration_seconds must be > 0", http.StatusBadRequest)
+			return
+		}
+		updates["duration_seconds"] = *req.DurationSeconds
+	}
+	if req.EpisodeNumber != nil {
+		if *req.EpisodeNumber <= 0 {
+			http.Error(w, "episode_number must be > 0", http.StatusBadRequest)
+			return
+		}
+		// Ensure uniqueness within the same series
+		var count int64
+		if err := h.db.Model(&models.Episode{}).
+			Where("series_id = ? AND episode_number = ? AND id <> ?", episode.SeriesID, *req.EpisodeNumber, episode.ID).
+			Count(&count).Error; err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		if count > 0 {
+			http.Error(w, "Episode number already exists for this series", http.StatusConflict)
+			return
+		}
+		updates["episode_number"] = *req.EpisodeNumber
+	}
+
+	if len(updates) == 0 {
+		http.Error(w, "No fields to update", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.db.Model(&episode).Updates(updates).Error; err != nil {
+		http.Error(w, "Failed to update episode", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Episode updated successfully",
+		"id":      episode.ID,
+	})
+}
+
+// DeleteEpisode allows the creator to delete an episode (soft delete)
+func (h *ContentHandler) DeleteEpisode(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	episodeID := vars["id"]
+
+	// Get user ID from context
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	// Verify ownership
+	var episode models.Episode
+	if err := h.db.Joins("JOIN series ON episodes.series_id = series.id").
+		Joins("JOIN creator_profiles ON series.creator_id = creator_profiles.id").
+		Where("episodes.id = ? AND creator_profiles.user_id = ?", episodeID, userID).
+		First(&episode).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Episode not found or access denied", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.db.Delete(&episode).Error; err != nil {
+		http.Error(w, "Failed to delete episode", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Episode deleted successfully",
+		"id":      episode.ID,
+	})
+}
+
+// GetEpisodes fetches all episodes for a specific series
+func (h *ContentHandler) GetEpisodes(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	seriesID := vars["seriesId"]
+
+	// Check if series exists and is published
+	var series models.Series
+	if err := h.db.Where("id = ? AND status = ?", seriesID, "published").First(&series).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Series not found or not published", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Get all published episodes for this series
+	var episodes []models.Episode
+	if err := h.db.Where("series_id = ? AND status = ?", seriesID, "published").
+		Order("episode_number").
+		Find(&episodes).Error; err != nil {
+		http.Error(w, "Failed to fetch episodes", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to response format
+	type EpisodeResponse struct {
+		ID              string     `json:"id"`
+		Title           string     `json:"title"`
+		EpisodeNumber   int        `json:"episode_number"`
+		DurationSeconds int        `json:"duration_seconds"`
+		ThumbURL        *string    `json:"thumb_url"`
+		PublishedAt     *time.Time `json:"published_at"`
+		CreatedAt       time.Time  `json:"created_at"`
+	}
+
+	episodeResponses := make([]EpisodeResponse, 0, len(episodes))
+	for _, ep := range episodes {
+		episodeResponses = append(episodeResponses, EpisodeResponse{
+			ID:              ep.ID,
+			Title:           ep.Title,
+			EpisodeNumber:   ep.EpisodeNumber,
+			DurationSeconds: ep.DurationSeconds,
+			ThumbURL:        ep.ThumbURL,
+			PublishedAt:     ep.PublishedAt,
+			CreatedAt:       ep.CreatedAt,
+		})
+	}
+
+	response := map[string]interface{}{
+		"series_id": seriesID,
+		"episodes":  episodeResponses,
+		"total":     len(episodeResponses),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
