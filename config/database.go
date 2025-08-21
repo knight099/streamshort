@@ -2,7 +2,6 @@ package config
 
 import (
 	"log"
-	"os"
 	"strings"
 
 	"streamshort/models"
@@ -13,9 +12,13 @@ import (
 )
 
 func InitDB() *gorm.DB {
-	// Get database URL from environment variable
-	dbURL := os.Getenv("DATABASE_URL")
-	log.Println(os.Getenv(("SKIP_MIGRATIONS")))
+	// Load configuration
+	cfg := LoadConfig()
+
+	// Get database URL from configuration
+	dbURL := cfg.DatabaseURL
+	log.Println("Database URL loaded from configuration")
+
 	if dbURL == "" {
 		// Fallback to local development URL
 		dbURL = "postgres://postgres:password@localhost:5432/streamshort?sslmode=disable"
@@ -60,7 +63,7 @@ func InitDB() *gorm.DB {
 	}
 
 	// Check if migrations should be skipped
-	skipMigrations := os.Getenv("SKIP_MIGRATIONS") == "true"
+	skipMigrations := cfg.SkipMigrations
 
 	if skipMigrations {
 		log.Println("Skipping database migrations (SKIP_MIGRATIONS=true)")

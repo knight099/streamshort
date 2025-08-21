@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"streamshort/config"
 	"streamshort/handlers"
 	"streamshort/middleware"
@@ -35,6 +34,9 @@ func main() {
 		log.Println("Loaded environment from .env.local")
 	}
 	_ = godotenv.Load() // ignore if .env is missing
+
+	// Load configuration
+	cfg := config.LoadConfig()
 
 	// Initialize database
 	db := config.InitDB()
@@ -137,7 +139,7 @@ func main() {
 	handler := c.Handler(r)
 
 	// Get port from environment variable or use default
-	port := os.Getenv("PORT")
+	port := cfg.Port
 	if port == "" {
 		port = "8080"
 	}
@@ -176,5 +178,8 @@ func main() {
 	log.Println("  GET  /content/series/{seriesId}/episodes - Get episodes for series (public)")
 	log.Println("  POST /payments/webhook          - Payment webhook (public)")
 
-	log.Fatal(http.ListenAndServe(":"+port, handler))
+	// Bind to all interfaces (0.0.0.0) for deployment compatibility
+	addr := "0.0.0.0:" + port
+	log.Printf("Binding to address: %s", addr)
+	log.Fatal(http.ListenAndServe(addr, handler))
 }
