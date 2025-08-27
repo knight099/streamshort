@@ -145,6 +145,16 @@ func seed(db *gorm.DB) error {
 		}
 	}
 
+	// 5) Seed subscription plans
+	if err := seedSubscriptionPlans(db); err != nil {
+		log.Printf("Warning: Failed to seed subscription plans: %v", err)
+	}
+
+	// 6) Seed test subscriptions
+	if err := seedTestSubscriptions(db); err != nil {
+		log.Printf("Warning: Failed to seed test subscriptions: %v", err)
+	}
+
 	return nil
 }
 

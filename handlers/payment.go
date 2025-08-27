@@ -2,25 +2,30 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
+	"streamshort/models"
+
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type PaymentHandler struct {
-	// In a real implementation, you'd have payment service clients here
+	db *gorm.DB
 }
 
-func NewPaymentHandler() *PaymentHandler {
-	return &PaymentHandler{}
+func NewPaymentHandler(db *gorm.DB) *PaymentHandler {
+	return &PaymentHandler{db: db}
 }
 
 // Request/Response structs matching OpenAPI schema
 type CreateSubscriptionRequest struct {
-	PlanID        string `json:"plan_id"`
-	PaymentMethod string `json:"payment_method"`
-	AutoRenew     bool   `json:"auto_renew"`
+	TargetType string `json:"target_type"`
+	TargetID   string `json:"target_id"`
+	PlanID     string `json:"plan_id"`
+	AutoRenew  bool   `json:"auto_renew"`
 }
 
 type CreateSubscriptionResponse struct {
@@ -30,6 +35,7 @@ type CreateSubscriptionResponse struct {
 	StartDate      time.Time `json:"start_date"`
 	EndDate        time.Time `json:"end_date"`
 	NextBilling    time.Time `json:"next_billing"`
+	CheckoutURL    string    `json:"checkout_url"`
 }
 
 type WebhookRequest struct {
@@ -58,25 +64,65 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Validate required fields
-	if req.PlanID == "" {
-		http.Error(w, "Plan ID is required", http.StatusBadRequest)
+	if req.TargetType == "" || req.TargetID == "" || req.PlanID == "" {
+		http.Error(w, "Target type, target ID, and plan ID are required", http.StatusBadRequest)
 		return
 	}
 
-	// Mock subscription creation (in real implementation, integrate with payment provider)
+	// Validate target type
+	if req.TargetType != "series" && req.TargetType != "creator" {
+		http.Error(w, "Target type must be 'series' or 'creator'", http.StatusBadRequest)
+		return
+	}
+
+	// Check if user already has an active subscription to this target
+	var existingSubscription models.Subscription
+	if err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?", 
+		userID, req.TargetType, req.TargetID, "active").First(&existingSubscription).Error; err == nil {
+		http.Error(w, "User already has an active subscription to this content", http.StatusConflict)
+		return
+	}
+
+	// Get plan details (in real implementation, this would come from a plans table)
+	// For now, we'll use default values
+	planAmount := 99.0 // Default amount in INR
+	planDuration := 30  // Default duration in days
+
+	// Create subscription record
 	subscriptionID := uuid.New().String()
 	now := time.Now()
+	endDate := now.AddDate(0, 0, planDuration)
 
-	// In real implementation, you'd save this to database with userID
-	_ = userID // Use userID to avoid linter warning
+	subscription := models.Subscription{
+		ID:         subscriptionID,
+		UserID:     userID,
+		TargetType: req.TargetType,
+		TargetID:   req.TargetID,
+		Status:     "active",
+		StartDate:  now,
+		EndDate:    endDate,
+		AutoRenew:  req.AutoRenew,
+		PlanID:     req.PlanID,
+		Amount:     planAmount,
+		Currency:   "INR",
+	}
 
+	// Save to database
+	if err := h.db.Create(&subscription).Error; err != nil {
+		http.Error(w, "Failed to create subscription", http.StatusInternalServerError)
+		return
+	}
+
+	// In real implementation, this would integrate with Razorpay
+	// For now, we'll return a mock response
 	response := CreateSubscriptionResponse{
 		SubscriptionID: subscriptionID,
 		Status:         "active",
 		PlanID:         req.PlanID,
 		StartDate:      now,
-		EndDate:        now.AddDate(0, 1, 0), // 1 month from now
-		NextBilling:    now.AddDate(0, 1, 0),
+		EndDate:        endDate,
+		NextBilling:    endDate,
+		CheckoutURL:    fmt.Sprintf("https://checkout.razorpay.com/v1/checkout.js?subscription_id=%s", subscriptionID),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -100,21 +146,21 @@ func (h *PaymentHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 
 	// Process webhook based on event type
 	switch req.EventType {
-	case "subscription.created":
-		// Handle subscription creation
-		break
+	case "subscription.activated":
+		// Handle subscription activation
+		h.handleSubscriptionActivated(req.Data)
 	case "subscription.updated":
 		// Handle subscription updates
-		break
+		h.handleSubscriptionUpdated(req.Data)
 	case "subscription.cancelled":
 		// Handle subscription cancellation
-		break
+		h.handleSubscriptionCancelled(req.Data)
 	case "payment.succeeded":
 		// Handle successful payment
-		break
+		h.handlePaymentSucceeded(req.Data)
 	case "payment.failed":
 		// Handle failed payment
-		break
+		h.handlePaymentFailed(req.Data)
 	default:
 		// Unknown event type
 		break
@@ -127,4 +173,93 @@ func (h *PaymentHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
+}
+
+// handleSubscriptionActivated processes subscription activation webhook
+func (h *PaymentHandler) handleSubscriptionActivated(data map[string]interface{}) {
+	// Extract subscription data from webhook
+	if subscriptionID, ok := data["subscription_id"].(string); ok {
+		// Update subscription status in database
+		h.db.Model(&models.Subscription{}).
+			Where("id = ?", subscriptionID).
+			Update("status", "active")
+	}
+}
+
+// handleSubscriptionUpdated processes subscription update webhook
+func (h *PaymentHandler) handleSubscriptionUpdated(data map[string]interface{}) {
+	// Handle subscription updates
+}
+
+// handleSubscriptionCancelled processes subscription cancellation webhook
+func (h *PaymentHandler) handleSubscriptionCancelled(data map[string]interface{}) {
+	if subscriptionID, ok := data["subscription_id"].(string); ok {
+		// Update subscription status in database
+		h.db.Model(&models.Subscription{}).
+			Where("id = ?", subscriptionID).
+			Update("status", "cancelled")
+	}
+}
+
+// handlePaymentSucceeded processes successful payment webhook
+func (h *PaymentHandler) handlePaymentSucceeded(data map[string]interface{}) {
+	// Handle successful payment
+}
+
+// handlePaymentFailed processes failed payment webhook
+func (h *PaymentHandler) handlePaymentFailed(data map[string]interface{}) {
+	// Handle failed payment
+}
+
+// CheckUserSubscription checks if a user has an active subscription to specific content
+func (h *PaymentHandler) CheckUserSubscription(userID, targetType, targetID string) (*models.Subscription, error) {
+	var subscription models.Subscription
+	
+	err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?", 
+		userID, targetType, targetID, "active").
+		First(&subscription).Error
+	
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil // No subscription found
+		}
+		return nil, err // Database error
+	}
+	
+	// Check if subscription is still active (not expired)
+	if subscription.IsExpired() {
+		// Update status to expired
+		h.db.Model(&subscription).Update("status", "expired")
+		return nil, nil
+	}
+	
+	return &subscription, nil
+}
+
+// GetUserSubscriptions returns all subscriptions for a user
+func (h *PaymentHandler) GetUserSubscriptions(userID string) ([]models.Subscription, error) {
+	var subscriptions []models.Subscription
+	
+	err := h.db.Where("user_id = ?", userID).
+		Preload("User").
+		Order("created_at DESC").
+		Find(&subscriptions).Error
+	
+	return subscriptions, err
+}
+
+// CancelSubscription cancels a user's subscription
+func (h *PaymentHandler) CancelSubscription(userID, subscriptionID string) error {
+	var subscription models.Subscription
+	
+	// Find subscription and verify ownership
+	err := h.db.Where("id = ? AND user_id = ?", subscriptionID, userID).
+		First(&subscription).Error
+	
+	if err != nil {
+		return err
+	}
+	
+	// Update status to cancelled
+	return h.db.Model(&subscription).Update("status", "cancelled").Error
 }

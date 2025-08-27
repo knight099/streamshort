@@ -86,6 +86,9 @@ func InitDB() *gorm.DB {
 			&models.EpisodeLike{},
 			&models.EpisodeRating{},
 			&models.EpisodeComment{},
+			// Subscription models
+			&models.Subscription{},
+			&models.SubscriptionPlan{},
 		}
 
 		for _, model := range modelsToMigrate {

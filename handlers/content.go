@@ -581,8 +581,8 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 	vars := mux.Vars(r)
 	episodeID := vars["id"]
 
-	// Get user ID from context (for future subscription checks)
-	_, ok := r.Context().Value("user_id").(string)
+	// Get user ID from context (for subscription checks)
+	userID, ok := r.Context().Value("user_id").(string)
 	if !ok {
 		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
 		return
@@ -605,8 +605,32 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// TODO: In production, check user subscription status
-	// For now, allow access to all authenticated users
+	// Check if user has access to this content based on series pricing
+	if episode.Series.PriceType != "free" {
+		// Check if user has an active subscription to this series
+		var subscription models.Subscription
+		err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?", 
+			userID, "series", episode.Series.ID, "active").
+			First(&subscription).Error
+		
+		if err != nil {
+			// No subscription found, check if subscription is expired
+			if err == gorm.ErrRecordNotFound {
+				http.Error(w, "Subscription required to access this content", http.StatusForbidden)
+				return
+			}
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		
+		// Check if subscription is still active (not expired)
+		if subscription.IsExpired() {
+			// Update status to expired
+			h.db.Model(&subscription).Update("status", "expired")
+			http.Error(w, "Subscription has expired", http.StatusForbidden)
+			return
+		}
+	}
 
 	// TODO: In production, generate actual signed URL with expiration
 	// For now, return a mock response
