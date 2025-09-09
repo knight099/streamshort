@@ -25,13 +25,13 @@ type Series struct {
 
 	// Relationships
 	Creator  *CreatorProfile `json:"creator" gorm:"foreignKey:CreatorID"`
-	Episodes []Episode       `json:"episodes" gorm:"foreignKey:SeriesID"`
+	Episodes []Episode       `json:"episodes" gorm:"foreignKey:SeriesID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // Episode represents a single episode in a series
 type Episode struct {
 	ID              string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	SeriesID        string         `json:"series_id" gorm:"type:uuid;not null"`
+	SeriesID        string         `json:"series_id" gorm:"type:uuid;not null;index"`
 	Title           string         `json:"title" gorm:"not null"`
 	EpisodeNumber   int            `json:"episode_number" gorm:"not null"`
 	DurationSeconds int            `json:"duration_seconds" gorm:"not null"`
@@ -46,7 +46,7 @@ type Episode struct {
 	DeletedAt       gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relationships
-	Series Series `json:"series" gorm:"foreignKey:SeriesID"`
+	Series Series `json:"series" gorm:"foreignKey:SeriesID;references:ID"`
 }
 
 // UploadRequest represents a request for upload URL

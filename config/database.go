@@ -116,6 +116,30 @@ func InitDB() *gorm.DB {
 				log.Printf("Warning: failed to create table for models.UploadRequest explicitly: %v", err)
 			}
 		}
+
+		// Safeguard: ensure episodes.series_id FK -> series.id exists with index (even if AutoMigrate skips FKs)
+		if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_episodes_series_id ON episodes (series_id);").Error; err != nil {
+			log.Printf("Warning: failed to ensure index idx_episodes_series_id: %v", err)
+		}
+		if err := db.Exec(`
+		DO $$
+		BEGIN
+		    IF NOT EXISTS (
+		        SELECT 1
+		        FROM information_schema.table_constraints tc
+		        WHERE tc.constraint_name = 'fk_episodes_series_id'
+		          AND tc.table_name = 'episodes'
+		          AND tc.constraint_type = 'FOREIGN KEY'
+		    ) THEN
+		        ALTER TABLE episodes
+		        ADD CONSTRAINT fk_episodes_series_id
+		        FOREIGN KEY (series_id)
+		        REFERENCES series(id)
+		        ON DELETE CASCADE;
+		    END IF;
+		END $$;`).Error; err != nil {
+			log.Printf("Warning: failed to ensure FK fk_episodes_series_id: %v", err)
+		}
 	}
 
 	log.Println("Database connected and auto-migrated successfully.")
