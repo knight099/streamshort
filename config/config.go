@@ -12,6 +12,7 @@ type Config struct {
 	Port           string
 	DatabaseURL    string
 	SkipMigrations bool
+	RedisURL       string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -25,6 +26,7 @@ func LoadConfig() *Config {
 		Port:           getEnv("PORT", "8080"),
 		DatabaseURL:    getEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/streamshort?sslmode=disable"),
 		SkipMigrations: getEnv("SKIP_MIGRATIONS", "false") == "true",
+		RedisURL:       getEnv("REDIS_URL", "redis://localhost:6379/0"),
 	}
 
 	return config

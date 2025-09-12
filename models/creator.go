@@ -14,14 +14,32 @@ type CreatorProfile struct {
 	KYCDocumentPath string         `json:"kyc_document_s3_path" gorm:"column:kyc_document_s3_path"`
 	KYCStatus       string         `json:"kyc_status" gorm:"default:'pending';check:kyc_status IN ('pending', 'verified', 'rejected')"`
 	PayoutDetails   *PayoutDetails `json:"payout_details" gorm:"foreignKey:CreatorID"`
+	FollowerCount   int64          `json:"follower_count" gorm:"default:0"`
 	Rating          *float64       `json:"rating" gorm:"type:decimal(3,2)"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
-	DeletedAt       gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+	// Derived fields (not stored)
+	SeriesCount int64          `json:"series_count" gorm:"-"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relationships
 	User *User `json:"user" gorm:"foreignKey:UserID"`
 }
+
+// CreatorFollow represents a user following a creator
+type CreatorFollow struct {
+	ID         string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	FollowerID string         `json:"follower_id" gorm:"type:uuid;not null;uniqueIndex:uix_follower_creator;index:idx_creator_follows_follower"`
+	CreatorID  string         `json:"creator_id" gorm:"type:uuid;not null;uniqueIndex:uix_follower_creator;index:idx_creator_follows_creator"`
+	CreatedAt  time.Time      `json:"created_at"`
+	DeletedAt  gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+
+	// Relationships
+	Follower *User           `json:"follower" gorm:"foreignKey:FollowerID;references:ID"`
+	Creator  *CreatorProfile `json:"creator" gorm:"foreignKey:CreatorID;references:ID"`
+}
+
+func (CreatorFollow) TableName() string { return "creator_follows" }
 
 type PayoutDetails struct {
 	ID            string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`

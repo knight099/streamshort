@@ -38,16 +38,16 @@ func main() {
 	// Load configuration
 	cfg := config.LoadConfig()
 
-	// Initialize database
-	db := config.InitDB()
+	// Initialize services (DB, Redis, Elasticsearch)
+	svcs := config.InitServices()
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(db)
-	creatorHandler := handlers.NewCreatorHandler(db)
-	contentHandler := handlers.NewContentHandler(db)
-	paymentHandler := handlers.NewPaymentHandler(db)
-	subscriptionHandler := handlers.NewSubscriptionHandler(db)
-	socialHandler := handlers.NewSocialHandler(db)
+	authHandler := handlers.NewAuthHandler(svcs.DB)
+	creatorHandler := handlers.NewCreatorHandler(svcs.DB)
+	contentHandler := handlers.NewContentHandlerWithServices(svcs.DB, svcs.RDB)
+	paymentHandler := handlers.NewPaymentHandler(svcs.DB)
+	subscriptionHandler := handlers.NewSubscriptionHandler(svcs.DB)
+	socialHandler := handlers.NewSocialHandler(svcs.DB)
 	adminHandler := handlers.NewAdminHandler()
 
 	// Initialize middleware
@@ -67,6 +67,7 @@ func main() {
 	r.HandleFunc("/content/series", contentHandler.ListSeries).Methods("GET")
 	r.HandleFunc("/content/series/{id}", contentHandler.GetSeries).Methods("GET")
 	r.HandleFunc("/content/series/{seriesId}/episodes", contentHandler.GetEpisodes).Methods("GET")
+	r.HandleFunc("/content/series/search", contentHandler.SearchSeries).Methods("GET")
 
 	// Public payment webhook (no authentication required)
 	r.HandleFunc("/payments/webhook", paymentHandler.Webhook).Methods("POST")
@@ -99,6 +100,11 @@ func main() {
 	protected.HandleFunc("/creators/onboard", creatorHandler.OnboardCreator).Methods("POST")
 	protected.HandleFunc("/creators/{id}/dashboard", creatorHandler.GetCreatorDashboard).Methods("GET")
 	protected.HandleFunc("/creators/content", contentHandler.GetCreatorContent).Methods("GET")
+	// Follow routes
+	protected.HandleFunc("/creators/{id}/follow", creatorHandler.FollowCreator).Methods("POST")
+	protected.HandleFunc("/creators/{id}/follow", creatorHandler.UnfollowCreator).Methods("DELETE")
+	protected.HandleFunc("/creators/{id}/following", creatorHandler.IsFollowing).Methods("GET")
+	protected.HandleFunc("/me/following", creatorHandler.ListFollowing).Methods("GET")
 
 	// Content routes (protected - creators only)
 	protected.HandleFunc("/content/series", contentHandler.CreateSeries).Methods("POST")
@@ -191,6 +197,7 @@ func main() {
 	log.Println("  GET  /content/series            - List series (public)")
 	log.Println("  GET  /content/series/{id}       - Get series details (public)")
 	log.Println("  GET  /content/series/{seriesId}/episodes - Get episodes for series (public)")
+	log.Println("  GET  /content/series/search   - Search series (public)")
 	log.Println("  POST /payments/webhook          - Payment webhook (public)")
 
 	// Bind to all interfaces (0.0.0.0) for deployment compatibility

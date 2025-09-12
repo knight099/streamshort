@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"streamshort/models"
@@ -171,8 +172,130 @@ func (h *CreatorHandler) GetCreatorProfile(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Populate derived field: series_count
+	var seriesCount int64
+	if err := h.db.Model(&models.Series{}).Where("creator_id = ?", creatorProfile.ID).Count(&seriesCount).Error; err == nil {
+		creatorProfile.SeriesCount = seriesCount
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(creatorProfile)
+}
+
+// Follow a creator
+func (h *CreatorHandler) FollowCreator(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+	vars := mux.Vars(r)
+	creatorID := vars["id"]
+
+	var creator models.CreatorProfile
+	if err := h.db.Where("id = ?", creatorID).First(&creator).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Creator not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	follow := models.CreatorFollow{FollowerID: userID, CreatorID: creatorID}
+	tx := h.db.Where("follower_id = ? AND creator_id = ?", userID, creatorID).FirstOrCreate(&follow)
+	if tx.Error != nil {
+		http.Error(w, "Failed to follow creator", http.StatusInternalServerError)
+		return
+	}
+	if tx.RowsAffected == 1 {
+		_ = h.db.Model(&models.CreatorProfile{}).
+			Where("id = ?", creatorID).
+			UpdateColumn("follower_count", gorm.Expr("follower_count + 1")).Error
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "followed"})
+}
+
+// Unfollow a creator
+func (h *CreatorHandler) UnfollowCreator(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+	vars := mux.Vars(r)
+	creatorID := vars["id"]
+
+	txDel := h.db.Where("follower_id = ? AND creator_id = ?", userID, creatorID).Unscoped().Delete(&models.CreatorFollow{})
+	if txDel.Error != nil {
+		http.Error(w, "Failed to unfollow creator", http.StatusInternalServerError)
+		return
+	}
+	if txDel.RowsAffected > 0 {
+		_ = h.db.Model(&models.CreatorProfile{}).
+			Where("id = ? AND follower_count > 0", creatorID).
+			UpdateColumn("follower_count", gorm.Expr("follower_count - 1")).Error
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "unfollowed"})
+}
+
+// List creators the user follows
+func (h *CreatorHandler) ListFollowing(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+	page := 1
+	limit := 20
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p > 0 {
+		page = p
+	}
+	if l, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && l > 0 && l <= 100 {
+		limit = l
+	}
+
+	var follows []models.CreatorFollow
+	if err := h.db.Where("follower_id = ?", userID).Offset((page - 1) * limit).Limit(limit).Order("created_at DESC").Find(&follows).Error; err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	creatorIDs := make([]string, 0, len(follows))
+	for _, f := range follows {
+		creatorIDs = append(creatorIDs, f.CreatorID)
+	}
+
+	var creators []models.CreatorProfile
+	if len(creatorIDs) > 0 {
+		if err := h.db.Where("id IN ?", creatorIDs).Find(&creators).Error; err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"total": len(creators), "items": creators})
+}
+
+// Check if current user follows a creator
+func (h *CreatorHandler) IsFollowing(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+	vars := mux.Vars(r)
+	creatorID := vars["id"]
+
+	var count int64
+	if err := h.db.Model(&models.CreatorFollow{}).Where("follower_id = ? AND creator_id = ?", userID, creatorID).Count(&count).Error; err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"following": count > 0})
 }
 
 // Update creator profile endpoint

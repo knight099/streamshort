@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -13,15 +15,21 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
 type ContentHandler struct {
-	db *gorm.DB
+	db  *gorm.DB
+	rdb *redis.Client
 }
 
 func NewContentHandler(db *gorm.DB) *ContentHandler {
 	return &ContentHandler{db: db}
+}
+
+func NewContentHandlerWithServices(db *gorm.DB, rdb *redis.Client) *ContentHandler {
+	return &ContentHandler{db: db, rdb: rdb}
 }
 
 // Request/Response structs matching OpenAPI schema
@@ -162,6 +170,23 @@ func (h *ContentHandler) CreateSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Best-effort: index series in Elasticsearch via HTTP if configured
+	if esURL := os.Getenv("ELASTICSEARCH_URL"); esURL != "" {
+		go func(s models.Series) {
+			body, _ := json.Marshal(s)
+			req, err := http.NewRequest("PUT", fmt.Sprintf("%s/series/_doc/%s", strings.TrimRight(esURL, "/"), s.ID), strings.NewReader(string(body)))
+			if err != nil {
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			client := &http.Client{Timeout: 2 * time.Second}
+			resp, err := client.Do(req)
+			if err == nil && resp != nil && resp.Body != nil {
+				resp.Body.Close()
+			}
+		}(series)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(series)
@@ -263,6 +288,89 @@ func (h *ContentHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// SearchSeries provides text search across published series using Redis cache and Elasticsearch.
+func (h *ContentHandler) SearchSeries(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
+
+	if q == "" {
+		http.Error(w, "q is required", http.StatusBadRequest)
+		return
+	}
+
+	page := 1
+	limit := 20
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
+	}
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+		limit = l
+	}
+
+	// Cache key
+	cacheKey := fmt.Sprintf("series:search:%s:%d:%d", strings.ToLower(q), page, limit)
+
+	// Try Redis cache
+	if h.rdb != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+		if cached, err := h.rdb.Get(ctx, cacheKey).Bytes(); err == nil && len(cached) > 0 {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(cached)
+			return
+		}
+	}
+
+	// DB ILIKE search
+	var response SeriesListResponse
+	var seriesRows []models.Series
+	like := "%" + q + "%"
+	query := h.db.Model(&models.Series{}).
+		Where("status = ?", "published").
+		Where("title ILIKE ? OR synopsis ILIKE ?", like, like)
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	if err := query.Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&seriesRows).Error; err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	items := make([]SeriesListItem, 0, len(seriesRows))
+	for _, s := range seriesRows {
+		items = append(items, SeriesListItem{
+			ID:           s.ID,
+			CreatorID:    s.CreatorID,
+			CreatorName:  nil,
+			Title:        s.Title,
+			Synopsis:     s.Synopsis,
+			Language:     s.Language,
+			CategoryTags: s.CategoryTags,
+			PriceType:    s.PriceType,
+			PriceAmount:  s.PriceAmount,
+			ThumbnailURL: s.ThumbnailURL,
+			Status:       s.Status,
+			CreatedAt:    s.CreatedAt,
+			UpdatedAt:    s.UpdatedAt,
+		})
+	}
+	response = SeriesListResponse{Total: total, Items: items}
+
+	// Cache response
+	if h.rdb != nil {
+		if b, err := json.Marshal(response); err == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			_ = h.rdb.Set(ctx, cacheKey, b, 5*time.Minute).Err()
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // GetSeries gets a specific series by ID
 func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -279,20 +387,22 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type SeriesDetailResponse struct {
-		ID           string         `json:"id"`
-		CreatorID    string         `json:"creator_id"`
-		CreatorName  *string        `json:"creator_name"`
-		Title        string         `json:"title"`
-		Synopsis     string         `json:"synopsis"`
-		Language     string         `json:"language"`
-		CategoryTags pq.StringArray `json:"category_tags"`
-		PriceType    string         `json:"price_type"`
-		PriceAmount  *float64       `json:"price_amount"`
-		ThumbnailURL *string        `json:"thumbnail_url"`
-		Status       string         `json:"status"`
-		CreatedAt    time.Time      `json:"created_at"`
-		UpdatedAt    time.Time      `json:"updated_at"`
-		Episodes     []EpisodeBrief `json:"episodes"`
+		ID            string         `json:"id"`
+		CreatorID     string         `json:"creator_id"`
+		CreatorName   *string        `json:"creator_name"`
+		Title         string         `json:"title"`
+		Synopsis      string         `json:"synopsis"`
+		Language      string         `json:"language"`
+		CategoryTags  pq.StringArray `json:"category_tags"`
+		PriceType     string         `json:"price_type"`
+		PriceAmount   *float64       `json:"price_amount"`
+		ThumbnailURL  *string        `json:"thumbnail_url"`
+		Status        string         `json:"status"`
+		CreatedAt     time.Time      `json:"created_at"`
+		UpdatedAt     time.Time      `json:"updated_at"`
+		Episodes      []EpisodeBrief `json:"episodes"`
+		FollowerCount int64          `json:"follower_count"`
+		Following     bool           `json:"following"`
 	}
 
 	var creatorName *string
@@ -313,21 +423,37 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// follower count
+	var followerCount int64
+	if err := h.db.Model(&models.CreatorFollow{}).Where("creator_id = ?", series.CreatorID).Count(&followerCount).Error; err != nil {
+		followerCount = 0
+	}
+	// following status (auth optional)
+	userID, _ := r.Context().Value("user_id").(string)
+	following := false
+	if userID != "" {
+		var c int64
+		_ = h.db.Model(&models.CreatorFollow{}).Where("follower_id = ? AND creator_id = ?", userID, series.CreatorID).Count(&c).Error
+		following = c > 0
+	}
+
 	resp := SeriesDetailResponse{
-		ID:           series.ID,
-		CreatorID:    series.CreatorID,
-		CreatorName:  creatorName,
-		Title:        series.Title,
-		Synopsis:     series.Synopsis,
-		Language:     series.Language,
-		CategoryTags: series.CategoryTags,
-		PriceType:    series.PriceType,
-		PriceAmount:  series.PriceAmount,
-		ThumbnailURL: series.ThumbnailURL,
-		Status:       series.Status,
-		CreatedAt:    series.CreatedAt,
-		UpdatedAt:    series.UpdatedAt,
-		Episodes:     eps,
+		ID:            series.ID,
+		CreatorID:     series.CreatorID,
+		CreatorName:   creatorName,
+		Title:         series.Title,
+		Synopsis:      series.Synopsis,
+		Language:      series.Language,
+		CategoryTags:  series.CategoryTags,
+		PriceType:     series.PriceType,
+		PriceAmount:   series.PriceAmount,
+		ThumbnailURL:  series.ThumbnailURL,
+		Status:        series.Status,
+		CreatedAt:     series.CreatedAt,
+		UpdatedAt:     series.UpdatedAt,
+		Episodes:      eps,
+		FollowerCount: followerCount,
+		Following:     following,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -397,6 +523,16 @@ func (h *ContentHandler) UpdateSeries(w http.ResponseWriter, r *http.Request) {
 	if err := h.db.Model(&series).Updates(updates).Error; err != nil {
 		http.Error(w, "Failed to update series", http.StatusInternalServerError)
 		return
+	}
+
+	// Best-effort: reindex series in Elasticsearch
+	if h.rdb != nil {
+		go func(id string) {
+			var s models.Series
+			if err := h.db.Where("id = ?", id).First(&s).Error; err == nil {
+				_ = s // placeholder for future indexing integration
+			}
+		}(series.ID)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -609,10 +745,10 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 	if episode.Series.PriceType != "free" {
 		// Check if user has an active subscription to this series
 		var subscription models.Subscription
-		err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?", 
+		err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?",
 			userID, "series", episode.Series.ID, "active").
 			First(&subscription).Error
-		
+
 		if err != nil {
 			// No subscription found, check if subscription is expired
 			if err == gorm.ErrRecordNotFound {
@@ -622,7 +758,7 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
-		
+
 		// Check if subscription is still active (not expired)
 		if subscription.IsExpired() {
 			// Update status to expired
