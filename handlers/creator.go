@@ -31,6 +31,7 @@ type CreatorDashboardResponse struct {
 	Views            int64   `json:"views"`
 	WatchTimeSeconds int64   `json:"watch_time_seconds"`
 	Earnings         float64 `json:"earnings"`
+	FollowerCount    int64   `json:"follower_count"`
 }
 
 // Creator onboarding endpoint
@@ -146,6 +147,7 @@ func (h *CreatorHandler) GetCreatorDashboard(w http.ResponseWriter, r *http.Requ
 		Views:            totalViews,
 		WatchTimeSeconds: totalWatchTime,
 		Earnings:         totalEarnings,
+		FollowerCount:    creatorProfile.FollowerCount,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
