@@ -1,0 +1,91 @@
+package handlers
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"gorm.io/gorm"
+)
+
+type AnalyticsHandler struct {
+	db *gorm.DB
+	// rpm in USD per 1000 minutes
+	rpmUSDPer1000Min float64
+}
+
+func NewAnalyticsHandler(db *gorm.DB, rpmUSDPer1000Min float64) *AnalyticsHandler {
+	return &AnalyticsHandler{db: db, rpmUSDPer1000Min: rpmUSDPer1000Min}
+}
+
+type WatchEventRequest struct {
+	EpisodeID      string `json:"episode_id"`
+	WatchedSeconds int64  `json:"watched_seconds"`
+}
+
+type AnalyticsResponse struct {
+	CreatorID        string                 `json:"creator_id"`
+	Views            int64                  `json:"views"`
+	WatchTimeSeconds int64                  `json:"watch_time_seconds"`
+	CreatorProfile   map[string]interface{} `json:"creator_profile"`
+}
+
+// POST /analytics/watch
+func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
+	var req WatchEventRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.EpisodeID == "" || req.WatchedSeconds <= 0 {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Resolve creator via episode -> series
+	type row struct{ CreatorID string }
+	var out row
+	if err := h.db.Raw(`
+        SELECT s.creator_id AS creator_id
+        FROM episodes e
+        JOIN series s ON s.id = e.series_id
+        WHERE e.id = ?
+        LIMIT 1`, req.EpisodeID).Scan(&out).Error; err != nil || out.CreatorID == "" {
+		http.Error(w, "Episode or creator not found", http.StatusNotFound)
+		return
+	}
+
+	// Upsert into creator_analytics (single row per creator)
+	// earnings increment = (watched_seconds / 60) * (rpmUSDPer1000Min / 1000)
+	earnPerMin := h.rpmUSDPer1000Min / 1000.0
+	// Postgres upsert
+	if err := h.db.Exec(`
+        INSERT INTO creator_analytics (id, creator_id, date, views, watch_time_seconds, earnings, created_at, updated_at)
+        VALUES (gen_random_uuid(), ?, CURRENT_DATE, 1, ?, (? * (?::float8/60.0)), NOW(), NOW())
+        ON CONFLICT (creator_id)
+        DO UPDATE SET
+          views = creator_analytics.views + 1,
+          watch_time_seconds = creator_analytics.watch_time_seconds + EXCLUDED.watch_time_seconds,
+          earnings = creator_analytics.earnings + EXCLUDED.earnings,
+          updated_at = NOW()`, out.CreatorID, req.WatchedSeconds, req.WatchedSeconds, earnPerMin).Error; err != nil {
+		http.Error(w, "Failed to update analytics", http.StatusInternalServerError)
+		return
+	}
+
+	// Return updated aggregate with basic creator profile fields
+	var resp AnalyticsResponse
+	if err := h.db.Raw(`
+        SELECT ca.creator_id,
+               ca.views,
+               ca.watch_time_seconds,
+               json_build_object(
+                   'id', cp.id,
+                   'user_id', cp.user_id,
+                   'display_name', cp.display_name
+               ) AS creator_profile
+        FROM creator_analytics ca
+        JOIN creator_profiles cp ON cp.id = ca.creator_id
+        WHERE ca.creator_id = ?
+        LIMIT 1`, out.CreatorID).Scan(&resp).Error; err != nil {
+		http.Error(w, "Failed to load analytics", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}

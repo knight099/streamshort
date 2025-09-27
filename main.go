@@ -42,12 +42,14 @@ func main() {
 	svcs := config.InitServices()
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(svcs.DB)
+	authHandler := handlers.NewAuthHandler(svcs.DB, svcs.FirebaseAPIKey)
 	creatorHandler := handlers.NewCreatorHandler(svcs.DB)
 	contentHandler := handlers.NewContentHandlerWithServices(svcs.DB, svcs.RDB)
 	paymentHandler := handlers.NewPaymentHandler(svcs.DB)
 	subscriptionHandler := handlers.NewSubscriptionHandler(svcs.DB)
 	socialHandler := handlers.NewSocialHandler(svcs.DB)
+	userHandler := handlers.NewUserHandler(svcs.DB)
+	analyticsHandler := handlers.NewAnalyticsHandler(svcs.DB, config.LoadConfig().CreatorRPMUSDPer1000Min)
 	adminHandler := handlers.NewAdminHandler()
 
 	// Initialize middleware
@@ -76,23 +78,21 @@ func main() {
 	r.HandleFunc("/auth/otp/send", authHandler.SendOTP).Methods("POST")
 	r.HandleFunc("/auth/otp/verify", authHandler.VerifyOTP).Methods("POST")
 	r.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
+	// Firebase phone auth routes
+	r.HandleFunc("/auth/firebase/otp/send", authHandler.FirebaseSendOTP).Methods("POST")
+	r.HandleFunc("/auth/firebase/otp/verify", authHandler.FirebaseVerifyOTP).Methods("POST")
+	r.HandleFunc("/auth/firebase/exchange", authHandler.FirebaseExchangeIDToken).Methods("POST")
+	// Recaptcha site key (for clients that need to render widget)
+	r.HandleFunc("/auth/recaptcha/site-key", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"site_key": svcs.RecaptchaSiteKey})
+	}).Methods("GET")
 
 	// Protected routes (example)
 	protected := r.PathPrefix("/api").Subrouter()
 	protected.Use(authMiddleware.AuthMiddleware)
-	protected.HandleFunc("/profile", func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Context().Value("user_id")
-		phone := r.Context().Value("phone")
-
-		response := map[string]interface{}{
-			"user_id": userID,
-			"phone":   phone,
-			"message": "Protected endpoint accessed successfully",
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-	}).Methods("GET")
+	protected.HandleFunc("/profile", userHandler.GetProfile).Methods("GET")
+	protected.HandleFunc("/profile", userHandler.UpdateProfile).Methods("PUT")
 
 	// Creator routes (protected)
 	protected.HandleFunc("/creators/profile", creatorHandler.GetCreatorProfile).Methods("GET")
@@ -107,6 +107,8 @@ func main() {
 	protected.HandleFunc("/me/following", creatorHandler.ListFollowing).Methods("GET")
 
 	// Content routes (protected - creators only)
+	// Analytics
+	protected.HandleFunc("/analytics/watch", analyticsHandler.RecordWatch).Methods("POST")
 	protected.HandleFunc("/content/series", contentHandler.CreateSeries).Methods("POST")
 	protected.HandleFunc("/content/series/{id}", contentHandler.UpdateSeries).Methods("PUT")
 	protected.HandleFunc("/content/series/{id}/episodes", contentHandler.CreateEpisode).Methods("POST")
@@ -166,6 +168,10 @@ func main() {
 	log.Println("  POST /auth/otp/send       - Send OTP")
 	log.Println("  POST /auth/otp/verify     - Verify OTP")
 	log.Println("  POST /auth/refresh        - Refresh token")
+	log.Println("  POST /auth/firebase/otp/send   - Send Firebase OTP")
+	log.Println("  POST /auth/firebase/otp/verify - Verify Firebase OTP")
+	log.Println("  POST /auth/firebase/exchange   - Exchange Firebase ID token for app tokens")
+	log.Println("  GET  /auth/recaptcha/site-key  - Get reCAPTCHA site key")
 	log.Println("  GET  /api/profile         - Protected profile (requires auth)")
 	log.Println("  POST /api/creators/onboard     - Creator onboarding (requires auth)")
 	log.Println("  GET  /api/creators/profile      - Get creator profile (requires auth)")

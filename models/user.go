@@ -9,6 +9,7 @@ import (
 type User struct {
 	ID        string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	Phone     string         `json:"phone" gorm:"not null;index:idx_users_phone,unique"`
+	Name      string         `json:"name" gorm:"type:text"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`

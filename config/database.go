@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -15,8 +16,10 @@ import (
 )
 
 type Services struct {
-	DB  *gorm.DB
-	RDB *redis.Client
+	DB               *gorm.DB
+	RDB              *redis.Client
+	FirebaseAPIKey   string
+	RecaptchaSiteKey string
 }
 
 func InitDB() *gorm.DB {
@@ -76,8 +79,13 @@ func InitDB() *gorm.DB {
 	if skipMigrations {
 		log.Println("Skipping database migrations (SKIP_MIGRATIONS=true)")
 	} else {
-		// Auto-migrate all models (automatically creates/updates tables)
-		log.Println("Running database auto-migration...")
+		// Run SQL migrations from migrations/*.sql first, then GORM automigrate for safety
+		log.Println("Running database migrations (SQL) and auto-migration...")
+
+		// Best-effort: execute SQL migrations from @migrations directory using the simple runner logic
+		if err := runSQLMigrations(db); err != nil {
+			log.Printf("Warning: SQL migrations failed: %v", err)
+		}
 
 		// Migrate models one by one to handle errors gracefully
 		modelsToMigrate := []interface{}{
@@ -107,6 +115,11 @@ func InitDB() *gorm.DB {
 			} else {
 				log.Printf("Successfully migrated model %T", model)
 			}
+		}
+
+		// Hard guarantee: ensure users.name column exists
+		if err := db.Exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT;").Error; err != nil {
+			log.Printf("Warning: failed to ensure users.name column: %v", err)
 		}
 
 		// Hard guarantee: ensure content tables exist even if AutoMigrate hit benign index errors
@@ -196,6 +209,92 @@ func InitDB() *gorm.DB {
 	return db
 }
 
+// runSQLMigrations executes all .sql files in the migrations directory, in lexicographic order.
+// It records applied versions in schema_migrations to ensure idempotency.
+func runSQLMigrations(db *gorm.DB) error {
+	// Ensure tracking table exists
+	if err := db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+        version VARCHAR(255) PRIMARY KEY,
+        applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );`).Error; err != nil {
+		return err
+	}
+
+	// Discover migration files
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	dir := cwd + "/migrations"
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	type mf struct{ version, path string }
+	files := make([]mf, 0)
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(name, ".sql") {
+			continue
+		}
+		// Basic numeric prefix check (e.g., 001_..., 010_...)
+		if len(name) < 3 || name[0] < '0' || name[0] > '9' {
+			continue
+		}
+		files = append(files, mf{version: strings.TrimSuffix(name, ".sql"), path: dir + "/" + name})
+	}
+	// Sort lexicographically
+	for i := 0; i < len(files)-1; i++ {
+		for j := i + 1; j < len(files); j++ {
+			if files[j].version < files[i].version {
+				files[i], files[j] = files[j], files[i]
+			}
+		}
+	}
+
+	// Fetch applied versions
+	rows, err := db.Raw("SELECT version FROM schema_migrations").Rows()
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	applied := map[string]struct{}{}
+	for rows.Next() {
+		var v string
+		_ = rows.Scan(&v)
+		applied[v] = struct{}{}
+	}
+
+	// Run pending migrations
+	for _, f := range files {
+		if _, ok := applied[f.version]; ok {
+			continue
+		}
+		content, err := os.ReadFile(f.path)
+		if err != nil {
+			return err
+		}
+		tx := db.Begin()
+		if err := tx.Exec(string(content)).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+		if err := tx.Exec("INSERT INTO schema_migrations (version) VALUES (?)", f.version).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+		if err := tx.Commit().Error; err != nil {
+			return err
+		}
+		log.Printf("Applied SQL migration: %s", f.version)
+	}
+	return nil
+}
+
 // InitServices initializes DB, Redis, and Elasticsearch clients
 func InitServices() *Services {
 	cfg := LoadConfig()
@@ -219,5 +318,5 @@ func InitServices() *Services {
 		}
 	}
 
-	return &Services{DB: db, RDB: rdb}
+	return &Services{DB: db, RDB: rdb, FirebaseAPIKey: cfg.FirebaseAPIKey, RecaptchaSiteKey: cfg.RecaptchaSiteKey}
 }

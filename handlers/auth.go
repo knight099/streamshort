@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	mathrand "math/rand"
 	"net/http"
 	"strconv"
@@ -16,11 +18,12 @@ import (
 )
 
 type AuthHandler struct {
-	db *gorm.DB
+	db             *gorm.DB
+	firebaseAPIKey string
 }
 
-func NewAuthHandler(db *gorm.DB) *AuthHandler {
-	return &AuthHandler{db: db}
+func NewAuthHandler(db *gorm.DB, firebaseAPIKey string) *AuthHandler {
+	return &AuthHandler{db: db, firebaseAPIKey: firebaseAPIKey}
 }
 
 // Request/Response structs matching OpenAPI schema
@@ -45,14 +48,316 @@ type TokenResponse struct {
 	ExpiresIn    int    `json:"expires_in"`
 }
 
+// Firebase OTP: send code to phone using Identity Toolkit REST API
+// Client must provide a reCAPTCHA token obtained from Firebase SDK on client side
+func (h *AuthHandler) FirebaseSendOTP(w http.ResponseWriter, r *http.Request) {
+	if h.firebaseAPIKey == "" {
+		log.Printf("[auth] FirebaseSendOTP: missing Firebase API key")
+		http.Error(w, "Firebase API key not configured", http.StatusInternalServerError)
+		return
+	}
+
+	var req FirebaseSendOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[auth] FirebaseSendOTP: invalid request body: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Phone == "" || req.RecaptchaToken == "" {
+		log.Printf("[auth] FirebaseSendOTP: missing phone or recaptcha_token (phone=%s)", req.Phone)
+		http.Error(w, "phone and recaptcha_token are required", http.StatusBadRequest)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"phoneNumber":    req.Phone,
+		"recaptchaToken": req.RecaptchaToken,
+	}
+	body, _ := json.Marshal(payload)
+
+	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=%s", h.firebaseAPIKey)
+	httpReq, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	log.Printf("[auth] FirebaseSendOTP: sending verification code (phone=%s)", req.Phone)
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		log.Printf("[auth] FirebaseSendOTP: request error: %v", err)
+		http.Error(w, "failed to contact Firebase", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errBody map[string]interface{}
+		_ = json.NewDecoder(resp.Body).Decode(&errBody)
+		log.Printf("[auth] FirebaseSendOTP: firebase responded %d: %v", resp.StatusCode, errBody)
+		w.WriteHeader(resp.StatusCode)
+		_ = json.NewEncoder(w).Encode(errBody)
+		return
+	}
+
+	var firebaseResp struct {
+		SessionInfo string `json:"sessionInfo"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&firebaseResp); err != nil {
+		log.Printf("[auth] FirebaseSendOTP: decode response error: %v", err)
+		http.Error(w, "failed to parse Firebase response", http.StatusBadGateway)
+		return
+	}
+
+	log.Printf("[auth] FirebaseSendOTP: success (phone=%s)", req.Phone)
+	out := FirebaseSendOTPResponse{SessionInfo: firebaseResp.SessionInfo, Message: "OTP sent via Firebase"}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(out)
+}
+
+// Firebase OTP: verify the code and sign in
+func (h *AuthHandler) FirebaseVerifyOTP(w http.ResponseWriter, r *http.Request) {
+	if h.firebaseAPIKey == "" {
+		log.Printf("[auth] FirebaseVerifyOTP: missing Firebase API key")
+		http.Error(w, "Firebase API key not configured", http.StatusInternalServerError)
+		return
+	}
+
+	var req FirebaseVerifyOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[auth] FirebaseVerifyOTP: invalid request body: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.SessionInfo == "" || req.Code == "" {
+		log.Printf("[auth] FirebaseVerifyOTP: missing session_info or code")
+		http.Error(w, "session_info and code are required", http.StatusBadRequest)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"sessionInfo": req.SessionInfo,
+		"code":        req.Code,
+	}
+	body, _ := json.Marshal(payload)
+
+	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber?key=%s", h.firebaseAPIKey)
+	httpReq, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	log.Printf("[auth] FirebaseVerifyOTP: verifying code with Firebase")
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		log.Printf("[auth] FirebaseVerifyOTP: request error: %v", err)
+		http.Error(w, "failed to contact Firebase", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errBody map[string]interface{}
+		_ = json.NewDecoder(resp.Body).Decode(&errBody)
+		log.Printf("[auth] FirebaseVerifyOTP: firebase responded %d: %v", resp.StatusCode, errBody)
+		w.WriteHeader(resp.StatusCode)
+		_ = json.NewEncoder(w).Encode(errBody)
+		return
+	}
+
+	var firebaseResp struct {
+		PhoneNumber  string `json:"phoneNumber"`
+		IDToken      string `json:"idToken"`
+		RefreshToken string `json:"refreshToken"`
+		ExpiresIn    string `json:"expiresIn"`
+		LocalID      string `json:"localId"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&firebaseResp); err != nil {
+		log.Printf("[auth] FirebaseVerifyOTP: decode response error: %v", err)
+		http.Error(w, "failed to parse Firebase response", http.StatusBadGateway)
+		return
+	}
+
+	phone := firebaseResp.PhoneNumber
+	if phone == "" {
+		log.Printf("[auth] FirebaseVerifyOTP: missing phoneNumber in Firebase response")
+		http.Error(w, "Firebase did not return phoneNumber", http.StatusBadGateway)
+		return
+	}
+
+	// Get or create user in our DB
+	var user models.User
+	if err := h.db.Where("phone = ?", phone).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Printf("[auth] FirebaseVerifyOTP: creating user (phone=%s)", phone)
+			user = models.User{Phone: phone}
+			if err := h.db.Create(&user).Error; err != nil {
+				log.Printf("[auth] FirebaseVerifyOTP: create user error: %v", err)
+				http.Error(w, "Failed to create user", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			log.Printf("[auth] FirebaseVerifyOTP: db error: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Issue our own app tokens
+	accessToken, err := h.generateAccessToken(user)
+	if err != nil {
+		log.Printf("[auth] FirebaseVerifyOTP: access token generation error: %v", err)
+		http.Error(w, "Failed to generate access token", http.StatusInternalServerError)
+		return
+	}
+	refreshToken, err := h.generateRefreshToken(user.ID)
+	if err != nil {
+		log.Printf("[auth] FirebaseVerifyOTP: refresh token generation error: %v", err)
+		http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[auth] FirebaseVerifyOTP: success (phone=%s, user_id=%s)", phone, user.ID)
+	response := TokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    int(TokenExpiration.Seconds()),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+// Exchange a Firebase ID token (from native SDK signInWithPhoneNumber) for app tokens
+func (h *AuthHandler) FirebaseExchangeIDToken(w http.ResponseWriter, r *http.Request) {
+	if h.firebaseAPIKey == "" {
+		log.Printf("[auth] FirebaseExchangeIDToken: missing Firebase API key")
+		http.Error(w, "Firebase API key not configured", http.StatusInternalServerError)
+		return
+	}
+
+	var req FirebaseExchangeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("[auth] FirebaseExchangeIDToken: invalid request body: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.IDToken == "" {
+		log.Printf("[auth] FirebaseExchangeIDToken: missing id_token")
+		http.Error(w, "id_token is required", http.StatusBadRequest)
+		return
+	}
+
+	// Verify ID token and lookup user via Identity Toolkit
+	payload := map[string]interface{}{
+		"idToken": req.IDToken,
+	}
+	body, _ := json.Marshal(payload)
+	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=%s", h.firebaseAPIKey)
+	httpReq, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	log.Printf("[auth] FirebaseExchangeIDToken: looking up id token with Firebase")
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		log.Printf("[auth] FirebaseExchangeIDToken: request error: %v", err)
+		http.Error(w, "failed to contact Firebase", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errBody map[string]interface{}
+		_ = json.NewDecoder(resp.Body).Decode(&errBody)
+		log.Printf("[auth] FirebaseExchangeIDToken: firebase responded %d: %v", resp.StatusCode, errBody)
+		w.WriteHeader(resp.StatusCode)
+		_ = json.NewEncoder(w).Encode(errBody)
+		return
+	}
+
+	var lookup struct {
+		Users []struct {
+			LocalID     string `json:"localId"`
+			PhoneNumber string `json:"phoneNumber"`
+		} `json:"users"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&lookup); err != nil {
+		log.Printf("[auth] FirebaseExchangeIDToken: decode response error: %v", err)
+		http.Error(w, "failed to parse Firebase response", http.StatusBadGateway)
+		return
+	}
+	if len(lookup.Users) == 0 || lookup.Users[0].PhoneNumber == "" {
+		log.Printf("[auth] FirebaseExchangeIDToken: missing phone number in Firebase user")
+		http.Error(w, "Firebase user missing phone number", http.StatusUnauthorized)
+		return
+	}
+	phone := lookup.Users[0].PhoneNumber
+
+	// Get or create our user
+	var user models.User
+	if err := h.db.Where("phone = ?", phone).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Printf("[auth] FirebaseExchangeIDToken: creating user (phone=%s)", phone)
+			user = models.User{Phone: phone}
+			if err := h.db.Create(&user).Error; err != nil {
+				log.Printf("[auth] FirebaseExchangeIDToken: create user error: %v", err)
+				http.Error(w, "Failed to create user", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			log.Printf("[auth] FirebaseExchangeIDToken: db error: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Issue our app tokens
+	accessToken, err := h.generateAccessToken(user)
+	if err != nil {
+		log.Printf("[auth] FirebaseExchangeIDToken: access token generation error: %v", err)
+		http.Error(w, "Failed to generate access token", http.StatusInternalServerError)
+		return
+	}
+	refreshToken, err := h.generateRefreshToken(user.ID)
+	if err != nil {
+		log.Printf("[auth] FirebaseExchangeIDToken: refresh token generation error: %v", err)
+		http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[auth] FirebaseExchangeIDToken: success (phone=%s, user_id=%s)", phone, user.ID)
+	response := TokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    int(TokenExpiration.Seconds()),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(response)
+}
+
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token"`
+}
+
+// Firebase Phone OTP (Identity Toolkit) request/response types
+type FirebaseSendOTPRequest struct {
+	Phone          string `json:"phone"`
+	RecaptchaToken string `json:"recaptcha_token"`
+}
+
+type FirebaseSendOTPResponse struct {
+	SessionInfo string `json:"session_info"`
+	Message     string `json:"message"`
+}
+
+type FirebaseVerifyOTPRequest struct {
+	SessionInfo string `json:"session_info"`
+	Code        string `json:"code"`
+}
+
+type FirebaseExchangeRequest struct {
+	IDToken string `json:"id_token"`
 }
 
 // JWT Claims
 type Claims struct {
 	UserID string `json:"user_id"`
 	Phone  string `json:"phone"`
+	Name   string `json:"name,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -81,33 +386,12 @@ func (h *AuthHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate OTP (6 digits)
-	otp := generateOTP()
-
-	// Generate transaction ID
-	txnID := "otp_txn_" + uuid.New().String()[:8]
-
-	// Create OTP transaction
-	otpTx := models.OTPTransaction{
-		TxnID:     txnID,
-		Phone:     req.Phone,
-		OTP:       otp,
-		ExpiresAt: time.Now().Add(OTPExpiration),
-	}
-
-	if err := h.db.Create(&otpTx).Error; err != nil {
-		http.Error(w, "Failed to create OTP transaction", http.StatusInternalServerError)
-		return
-	}
-
-	// In a real application, you would send the OTP via SMS here
-	// For now, we'll just log it
-	fmt.Printf("OTP for %s: %s\n", req.Phone, otp)
-
+	// Since we are moving to Firebase for OTP delivery, we keep this endpoint
+	// for backward compatibility but simply acknowledge the request.
 	response := PhoneOtpSendResponse{
-		TxnID:     txnID,
+		TxnID:     "deprecated",
 		ExpiresIn: int(OTPExpiration.Seconds()),
-		Message:   fmt.Sprintf("OTP sent to %s", req.Phone),
+		Message:   fmt.Sprintf("Deprecated: Use /auth/firebase/otp/send for %s", req.Phone),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -237,6 +521,7 @@ func (h *AuthHandler) generateAccessToken(user models.User) (string, error) {
 	claims := Claims{
 		UserID: user.ID,
 		Phone:  user.Phone,
+		Name:   user.Name,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExpiration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -271,4 +556,15 @@ func generateOTP() string {
 		otp += strconv.Itoa(mathrand.Intn(10))
 	}
 	return otp
+}
+
+type RecaptchaSiteKeyResponse struct {
+	SiteKey string `json:"site_key"`
+}
+
+func (h *AuthHandler) GetRecaptchaSiteKey(w http.ResponseWriter, r *http.Request) {
+	// This handler will be wired with a closure to include the site key
+	w.Header().Set("Content-Type", "application/json")
+	// Placeholder will be replaced in main wiring via a bound handler
+	_ = json.NewEncoder(w).Encode(RecaptchaSiteKeyResponse{SiteKey: ""})
 }
