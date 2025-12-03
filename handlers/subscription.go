@@ -258,6 +258,17 @@ func (h *SubscriptionHandler) CheckSubscriptionStatus(w http.ResponseWriter, r *
 	if err == nil && !subscription.IsExpired() {
 		hasAccess = true
 		subscriptionDetails = &subscription
+	} else {
+		// If no direct subscription found for target, allow access if user has any active subscription
+		var anySub models.Subscription
+		errAny := h.db.Where("user_id = ? AND status = ?", userID, "active").
+			Order("end_date DESC").First(&anySub).Error
+		if errAny == nil && !anySub.IsExpired() {
+			hasAccess = true
+			subscriptionDetails = &anySub
+		} else if errAny == nil && anySub.IsExpired() {
+			h.db.Model(&anySub).Update("status", "expired")
+		}
 	}
 
 	response := map[string]interface{}{

@@ -750,13 +750,33 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 			First(&subscription).Error
 
 		if err != nil {
-			// No subscription found, check if subscription is expired
-			if err == gorm.ErrRecordNotFound {
-				http.Error(w, "Subscription required to access this content", http.StatusForbidden)
+			if err != gorm.ErrRecordNotFound {
+				http.Error(w, "Database error", http.StatusInternalServerError)
 				return
 			}
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
+
+			// If no series-level subscription, check for creator-level subscription
+			errCreator := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?",
+				userID, "creator", episode.Series.CreatorID, "active").
+				First(&subscription).Error
+			if errCreator != nil {
+				if errCreator != gorm.ErrRecordNotFound {
+					http.Error(w, "Database error", http.StatusInternalServerError)
+					return
+				}
+
+				// If no creator-level subscription, allow access if user has any active subscription (global/all-access)
+				errAny := h.db.Where("user_id = ? AND status = ?", userID, "active").
+					Order("end_date DESC").First(&subscription).Error
+				if errAny != nil {
+					if errAny == gorm.ErrRecordNotFound {
+						http.Error(w, "Subscription required to access this content", http.StatusForbidden)
+						return
+					}
+					http.Error(w, "Database error", http.StatusInternalServerError)
+					return
+				}
+			}
 		}
 
 		// Check if subscription is still active (not expired)

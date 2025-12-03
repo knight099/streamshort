@@ -135,13 +135,7 @@ func (h *CreatorHandler) GetCreatorDashboard(w http.ResponseWriter, r *http.Requ
 		totalEarnings += analytic.Earnings
 	}
 
-	// Create mock analytics if none exist (for development)
-	if len(analytics) == 0 {
-		// In production, you would calculate real analytics
-		totalViews = 1245
-		totalWatchTime = 456780
-		totalEarnings = 1299.50
-	}
+	// No mock data - new creators will see zeros until they have real analytics
 
 	response := CreatorDashboardResponse{
 		Views:            totalViews,
@@ -349,29 +343,4 @@ func (h *CreatorHandler) UpdateCreatorProfile(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(creatorProfile)
 }
 
-// Helper function to create mock analytics for testing
-func (h *CreatorHandler) CreateMockAnalytics(creatorID string) error {
-	// Create analytics for the last 7 days
-	for i := 6; i >= 0; i-- {
-		date := time.Now().AddDate(0, 0, -i)
 
-		// Generate some realistic mock data
-		views := int64(100 + (i * 50) + int(time.Now().Unix()%100))
-		watchTime := int64(views * 300)   // 5 minutes average watch time
-		earnings := float64(views) * 0.01 // $0.01 per view
-
-		analytic := models.CreatorAnalytics{
-			CreatorID:        creatorID,
-			Date:             date,
-			Views:            views,
-			WatchTimeSeconds: watchTime,
-			Earnings:         earnings,
-		}
-
-		if err := h.db.Create(&analytic).Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
-}

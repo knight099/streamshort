@@ -124,12 +124,13 @@ func main() {
 	protected.HandleFunc("/payments/create-subscription", paymentHandler.CreateSubscription).Methods("POST")
 
 	// Subscription routes (protected)
+	// IMPORTANT: Specific routes must come BEFORE parameterized routes in Gorilla Mux
+	protected.HandleFunc("/subscriptions/plans", subscriptionHandler.GetSubscriptionPlans).Methods("GET")
+	protected.HandleFunc("/subscriptions/check", subscriptionHandler.CheckSubscriptionStatus).Methods("GET")
 	protected.HandleFunc("/subscriptions", subscriptionHandler.GetUserSubscriptions).Methods("GET")
 	protected.HandleFunc("/subscriptions/{id}", subscriptionHandler.GetUserSubscription).Methods("GET")
 	protected.HandleFunc("/subscriptions/{id}/cancel", subscriptionHandler.CancelUserSubscription).Methods("POST")
 	protected.HandleFunc("/subscriptions/{id}/renew", subscriptionHandler.RenewUserSubscription).Methods("POST")
-	protected.HandleFunc("/subscriptions/check", subscriptionHandler.CheckSubscriptionStatus).Methods("GET")
-	protected.HandleFunc("/subscriptions/plans", subscriptionHandler.GetSubscriptionPlans).Methods("GET")
 
 	// Social/Engagement routes (protected)
 	protected.HandleFunc("/episodes/{id}/like", socialHandler.LikeEpisode).Methods("POST")

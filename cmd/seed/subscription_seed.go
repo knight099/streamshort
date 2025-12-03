@@ -16,20 +16,9 @@ func seedSubscriptionPlans(db *gorm.DB) error {
 
 	plans := []models.SubscriptionPlan{
 		{
-			ID:          uuid.New().String(),
-			Name:        "Basic Monthly",
-			Description: "Access to one series for 30 days",
-			Duration:    30,
-			Amount:      99.0,
-			Currency:    "INR",
-			IsActive:    true,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-		},
-		{
-			ID:          uuid.New().String(),
-			Name:        "Premium Monthly",
-			Description: "Access to all series from one creator for 30 days",
+			ID:          "all_access_30d",
+			Name:        "All-Access Monthly",
+			Description: "Access to all series across all creators for 30 days",
 			Duration:    30,
 			Amount:      299.0,
 			Currency:    "INR",
@@ -38,20 +27,9 @@ func seedSubscriptionPlans(db *gorm.DB) error {
 			UpdatedAt:   time.Now(),
 		},
 		{
-			ID:          uuid.New().String(),
-			Name:        "Basic Yearly",
-			Description: "Access to one series for 365 days",
-			Duration:    365,
-			Amount:      999.0,
-			Currency:    "INR",
-			IsActive:    true,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-		},
-		{
-			ID:          uuid.New().String(),
-			Name:        "Premium Yearly",
-			Description: "Access to all series from one creator for 365 days",
+			ID:          "all_access_365d",
+			Name:        "All-Access Yearly",
+			Description: "Access to all series across all creators for 365 days",
 			Duration:    365,
 			Amount:      2999.0,
 			Currency:    "INR",
@@ -62,7 +40,15 @@ func seedSubscriptionPlans(db *gorm.DB) error {
 	}
 
 	for _, plan := range plans {
-		if err := db.Create(&plan).Error; err != nil {
+		if err := db.Where("id = ?", plan.ID).Assign(map[string]interface{}{
+			"name":        plan.Name,
+			"description": plan.Description,
+			"duration":    plan.Duration,
+			"amount":      plan.Amount,
+			"currency":    plan.Currency,
+			"is_active":   plan.IsActive,
+			"updated_at":  time.Now(),
+		}).FirstOrCreate(&models.SubscriptionPlan{ID: plan.ID}).Error; err != nil {
 			log.Printf("Failed to create plan %s: %v", plan.Name, err)
 			continue
 		}

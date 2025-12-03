@@ -63,41 +63,79 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Normalize inputs for all-access plans: allow missing or non-standard target
+	isAllAccessPlan := req.PlanID == "all_access_30d" || req.PlanID == "all_access_365d"
+	if isAllAccessPlan {
+		// For all-access, we don't gate on target. Treat as global subscription.
+		req.TargetType = "global"
+		req.TargetID = ""
+	}
+
 	// Validate required fields
-	if req.TargetType == "" || req.TargetID == "" || req.PlanID == "" {
-		http.Error(w, "Target type, target ID, and plan ID are required", http.StatusBadRequest)
+	if req.PlanID == "" {
+		http.Error(w, "Plan ID is required", http.StatusBadRequest)
 		return
+	}
+	if !isAllAccessPlan {
+		if req.TargetType == "" || req.TargetID == "" {
+			http.Error(w, "Target type and target ID are required", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Validate target type
-	if req.TargetType != "series" && req.TargetType != "creator" {
-		http.Error(w, "Target type must be 'series' or 'creator'", http.StatusBadRequest)
-		return
+	if req.TargetType != "" { // allow empty when all-access
+		if req.TargetType != "series" && req.TargetType != "creator" && req.TargetType != "global" {
+			http.Error(w, "Target type must be 'series', 'creator', or 'global'", http.StatusBadRequest)
+			return
+		}
 	}
 
-	// Check if user already has an active subscription to this target
-	var existingSubscription models.Subscription
-	if err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?", 
-		userID, req.TargetType, req.TargetID, "active").First(&existingSubscription).Error; err == nil {
-		http.Error(w, "User already has an active subscription to this content", http.StatusConflict)
-		return
+	// Check if user already has an active subscription
+	if isAllAccessPlan {
+		// Prevent multiple active all-access plans
+		var existingAllAccess models.Subscription
+		if err := h.db.Where("user_id = ? AND status = ? AND plan_id IN ?",
+			userID, "active", []string{"all_access_30d", "all_access_365d"}).
+			First(&existingAllAccess).Error; err == nil {
+			http.Error(w, "User already has an active all-access subscription", http.StatusConflict)
+			return
+		}
+	} else {
+		var existingSubscription models.Subscription
+		if err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?",
+			userID, req.TargetType, req.TargetID, "active").First(&existingSubscription).Error; err == nil {
+			http.Error(w, "User already has an active subscription to this content", http.StatusConflict)
+			return
+		}
 	}
 
-	// Get plan details (in real implementation, this would come from a plans table)
-	// For now, we'll use default values
-	planAmount := 99.0 // Default amount in INR
-	planDuration := 30  // Default duration in days
+	// Get plan details from subscription_plans table
+	var plan models.SubscriptionPlan
+	if err := h.db.Where("id = ? AND is_active = ?", req.PlanID, true).First(&plan).Error; err != nil {
+		http.Error(w, "Invalid or inactive plan_id", http.StatusBadRequest)
+		return
+	}
+	planAmount := plan.Amount
+	planDuration := plan.Duration
 
 	// Create subscription record
 	subscriptionID := uuid.New().String()
 	now := time.Now()
 	endDate := now.AddDate(0, 0, planDuration)
 
+	// Prepare pointer for TargetID
+	var targetIDPtr *string
+	if !isAllAccessPlan {
+		tid := req.TargetID
+		targetIDPtr = &tid
+	} // else leave nil for global
+
 	subscription := models.Subscription{
 		ID:         subscriptionID,
 		UserID:     userID,
 		TargetType: req.TargetType,
-		TargetID:   req.TargetID,
+		TargetID:   targetIDPtr,
 		Status:     "active",
 		StartDate:  now,
 		EndDate:    endDate,
