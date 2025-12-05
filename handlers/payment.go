@@ -252,52 +252,52 @@ func (h *PaymentHandler) handlePaymentFailed(data map[string]interface{}) {
 // CheckUserSubscription checks if a user has an active subscription to specific content
 func (h *PaymentHandler) CheckUserSubscription(userID, targetType, targetID string) (*models.Subscription, error) {
 	var subscription models.Subscription
-	
-	err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?", 
+
+	err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?",
 		userID, targetType, targetID, "active").
 		First(&subscription).Error
-	
+
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil // No subscription found
 		}
 		return nil, err // Database error
 	}
-	
+
 	// Check if subscription is still active (not expired)
 	if subscription.IsExpired() {
 		// Update status to expired
 		h.db.Model(&subscription).Update("status", "expired")
 		return nil, nil
 	}
-	
+
 	return &subscription, nil
 }
 
 // GetUserSubscriptions returns all subscriptions for a user
 func (h *PaymentHandler) GetUserSubscriptions(userID string) ([]models.Subscription, error) {
 	var subscriptions []models.Subscription
-	
+
 	err := h.db.Where("user_id = ?", userID).
 		Preload("User").
 		Order("created_at DESC").
 		Find(&subscriptions).Error
-	
+
 	return subscriptions, err
 }
 
 // CancelSubscription cancels a user's subscription
 func (h *PaymentHandler) CancelSubscription(userID, subscriptionID string) error {
 	var subscription models.Subscription
-	
+
 	// Find subscription and verify ownership
 	err := h.db.Where("id = ? AND user_id = ?", subscriptionID, userID).
 		First(&subscription).Error
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	// Update status to cancelled
 	return h.db.Model(&subscription).Update("status", "cancelled").Error
 }

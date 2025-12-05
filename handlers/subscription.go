@@ -142,9 +142,9 @@ func (h *SubscriptionHandler) CancelUserSubscription(w http.ResponseWriter, r *h
 	}
 
 	response := map[string]interface{}{
-		"message":        "Subscription cancelled successfully",
+		"message":         "Subscription cancelled successfully",
 		"subscription_id": subscriptionID,
-		"status":         "cancelled",
+		"status":          "cancelled",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -193,8 +193,8 @@ func (h *SubscriptionHandler) RenewUserSubscription(w http.ResponseWriter, r *ht
 
 	// Update subscription
 	updates := map[string]interface{}{
-		"status":    "active",
-		"end_date":  newEndDate,
+		"status":     "active",
+		"end_date":   newEndDate,
 		"updated_at": time.Now(),
 	}
 
@@ -204,10 +204,10 @@ func (h *SubscriptionHandler) RenewUserSubscription(w http.ResponseWriter, r *ht
 	}
 
 	response := map[string]interface{}{
-		"message":        "Subscription renewed successfully",
+		"message":         "Subscription renewed successfully",
 		"subscription_id": subscriptionID,
-		"status":         "active",
-		"new_end_date":   newEndDate,
+		"status":          "active",
+		"new_end_date":    newEndDate,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -248,7 +248,7 @@ func (h *SubscriptionHandler) CheckSubscriptionStatus(w http.ResponseWriter, r *
 
 	// Check subscription status
 	var subscription models.Subscription
-	err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?", 
+	err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?",
 		userID, targetType, targetID, "active").
 		First(&subscription).Error
 
