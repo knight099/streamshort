@@ -11,7 +11,6 @@ type Subscription struct {
 	ID                     string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	UserID                 string         `json:"user_id" gorm:"type:uuid;not null;index:idx_subscriptions_user_id"`
 	TargetType             string         `json:"target_type" gorm:"type:varchar(20);not null;check:target_type IN ('series', 'creator', 'global')"`
-	TargetID               *string        `json:"target_id" gorm:"type:uuid;index:idx_subscriptions_target"`
 	RazorpaySubscriptionID *string        `json:"razorpay_subscription_id" gorm:"type:varchar(255)"`
 	Status                 string         `json:"status" gorm:"type:varchar(20);default:'active';check:status IN ('active', 'cancelled', 'expired')"`
 	StartDate              time.Time      `json:"start_date" gorm:"not null"`

@@ -237,20 +237,10 @@ func (h *SubscriptionHandler) CheckSubscriptionStatus(w http.ResponseWriter, r *
 		return
 	}
 
-	// Get query parameters
-	targetType := r.URL.Query().Get("target_type")
-	targetID := r.URL.Query().Get("target_id")
-
-	if targetType == "" || targetID == "" {
-		http.Error(w, "Target type and target ID are required", http.StatusBadRequest)
-		return
-	}
-
-	// Check subscription status
+	// New behavior: user has access if they have any active subscription
 	var subscription models.Subscription
-	err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?",
-		userID, targetType, targetID, "active").
-		First(&subscription).Error
+	err := h.db.Where("user_id = ? AND status = ?", userID, "active").
+		Order("end_date DESC").First(&subscription).Error
 
 	hasAccess := false
 	var subscriptionDetails *models.Subscription
@@ -258,23 +248,14 @@ func (h *SubscriptionHandler) CheckSubscriptionStatus(w http.ResponseWriter, r *
 	if err == nil && !subscription.IsExpired() {
 		hasAccess = true
 		subscriptionDetails = &subscription
-	} else {
-		// If no direct subscription found for target, allow access if user has any active subscription
-		var anySub models.Subscription
-		errAny := h.db.Where("user_id = ? AND status = ?", userID, "active").
-			Order("end_date DESC").First(&anySub).Error
-		if errAny == nil && !anySub.IsExpired() {
-			hasAccess = true
-			subscriptionDetails = &anySub
-		} else if errAny == nil && anySub.IsExpired() {
-			h.db.Model(&anySub).Update("status", "expired")
-		}
+	} else if err == nil && subscription.IsExpired() {
+		h.db.Model(&subscription).Update("status", "expired")
 	}
 
 	response := map[string]interface{}{
 		"has_access":           hasAccess,
-		"target_type":          targetType,
-		"target_id":            targetID,
+		"target_type":          "global",
+		"target_id":            nil,
 		"subscription_details": subscriptionDetails,
 	}
 

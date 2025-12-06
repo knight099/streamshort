@@ -23,7 +23,6 @@ func NewPaymentHandler(db *gorm.DB) *PaymentHandler {
 // Request/Response structs matching OpenAPI schema
 type CreateSubscriptionRequest struct {
 	TargetType string `json:"target_type"`
-	TargetID   string `json:"target_id"`
 	PlanID     string `json:"plan_id"`
 	AutoRenew  bool   `json:"auto_renew"`
 }
@@ -68,7 +67,6 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 	if isAllAccessPlan {
 		// For all-access, we don't gate on target. Treat as global subscription.
 		req.TargetType = "global"
-		req.TargetID = ""
 	}
 
 	// Validate required fields
@@ -76,12 +74,7 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Plan ID is required", http.StatusBadRequest)
 		return
 	}
-	if !isAllAccessPlan {
-		if req.TargetType == "" || req.TargetID == "" {
-			http.Error(w, "Target type and target ID are required", http.StatusBadRequest)
-			return
-		}
-	}
+	// For our current plans (all-access), target is not required
 
 	// Validate target type
 	if req.TargetType != "" { // allow empty when all-access
@@ -103,8 +96,8 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 		}
 	} else {
 		var existingSubscription models.Subscription
-		if err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?",
-			userID, req.TargetType, req.TargetID, "active").First(&existingSubscription).Error; err == nil {
+		if err := h.db.Where("user_id = ? AND target_type = ? AND status = ?",
+			userID, req.TargetType, "active").First(&existingSubscription).Error; err == nil {
 			http.Error(w, "User already has an active subscription to this content", http.StatusConflict)
 			return
 		}
@@ -124,18 +117,10 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 	now := time.Now()
 	endDate := now.AddDate(0, 0, planDuration)
 
-	// Prepare pointer for TargetID
-	var targetIDPtr *string
-	if !isAllAccessPlan {
-		tid := req.TargetID
-		targetIDPtr = &tid
-	} // else leave nil for global
-
 	subscription := models.Subscription{
 		ID:         subscriptionID,
 		UserID:     userID,
 		TargetType: req.TargetType,
-		TargetID:   targetIDPtr,
 		Status:     "active",
 		StartDate:  now,
 		EndDate:    endDate,

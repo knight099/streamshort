@@ -743,40 +743,17 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 
 	// Check if user has access to this content based on series pricing
 	if episode.Series.PriceType != "free" {
-		// Check if user has an active subscription to this series
+		// Allow access if user has any active subscription (global/all-access)
 		var subscription models.Subscription
-		err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?",
-			userID, "series", episode.Series.ID, "active").
-			First(&subscription).Error
-
+		err := h.db.Where("user_id = ? AND status = ?", userID, "active").
+			Order("end_date DESC").First(&subscription).Error
 		if err != nil {
-			if err != gorm.ErrRecordNotFound {
-				http.Error(w, "Database error", http.StatusInternalServerError)
+			if err == gorm.ErrRecordNotFound {
+				http.Error(w, "Subscription required to access this content", http.StatusForbidden)
 				return
 			}
-
-			// If no series-level subscription, check for creator-level subscription
-			errCreator := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?",
-				userID, "creator", episode.Series.CreatorID, "active").
-				First(&subscription).Error
-			if errCreator != nil {
-				if errCreator != gorm.ErrRecordNotFound {
-					http.Error(w, "Database error", http.StatusInternalServerError)
-					return
-				}
-
-				// If no creator-level subscription, allow access if user has any active subscription (global/all-access)
-				errAny := h.db.Where("user_id = ? AND status = ?", userID, "active").
-					Order("end_date DESC").First(&subscription).Error
-				if errAny != nil {
-					if errAny == gorm.ErrRecordNotFound {
-						http.Error(w, "Subscription required to access this content", http.StatusForbidden)
-						return
-					}
-					http.Error(w, "Database error", http.StatusInternalServerError)
-					return
-				}
-			}
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
 		}
 
 		// Check if subscription is still active (not expired)
