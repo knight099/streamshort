@@ -118,7 +118,8 @@ func (mr *MigrationRunner) getMigrationFiles() ([]Migration, error) {
 
 		// Extract version from filename (e.g., "001_create_users_table.sql" -> "001_create_users_table")
 		version := strings.TrimSuffix(file.Name(), ".sql")
-		if !strings.HasPrefix(version, "00") {
+		// Allow any version starting with a digit (e.g. 001, 010, 20240101)
+		if len(version) == 0 || version[0] < '0' || version[0] > '9' {
 			continue // Skip non-migration files
 		}
 

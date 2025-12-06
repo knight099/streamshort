@@ -238,8 +238,8 @@ func (h *PaymentHandler) handlePaymentFailed(data map[string]interface{}) {
 func (h *PaymentHandler) CheckUserSubscription(userID, targetType, targetID string) (*models.Subscription, error) {
 	var subscription models.Subscription
 
-	err := h.db.Where("user_id = ? AND target_type = ? AND target_id = ? AND status = ?",
-		userID, targetType, targetID, "active").
+	err := h.db.Where("user_id = ? AND target_type = ? AND status = ?",
+		userID, targetType, "active").
 		First(&subscription).Error
 
 	if err != nil {

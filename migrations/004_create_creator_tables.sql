@@ -58,18 +58,39 @@ CREATE INDEX IF NOT EXISTS idx_creator_analytics_creator_id ON creator_analytics
 CREATE INDEX IF NOT EXISTS idx_creator_analytics_date ON creator_analytics(date);
 CREATE INDEX IF NOT EXISTS idx_creator_analytics_creator_date ON creator_analytics(creator_id, date);
 
--- Add foreign key constraints
-ALTER TABLE creator_profiles 
-ADD CONSTRAINT fk_creator_profiles_user_id 
-FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+-- Add foreign key constraints safely
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'fk_creator_profiles_user_id'
+          AND table_name = 'creator_profiles'
+    ) THEN
+        ALTER TABLE creator_profiles 
+        ADD CONSTRAINT fk_creator_profiles_user_id 
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
 
-ALTER TABLE payout_details 
-ADD CONSTRAINT fk_payout_details_creator_id 
-FOREIGN KEY (creator_id) REFERENCES creator_profiles(id) ON DELETE CASCADE;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'fk_payout_details_creator_id'
+          AND table_name = 'payout_details'
+    ) THEN
+        ALTER TABLE payout_details 
+        ADD CONSTRAINT fk_payout_details_creator_id 
+        FOREIGN KEY (creator_id) REFERENCES creator_profiles(id) ON DELETE CASCADE;
+    END IF;
 
-ALTER TABLE creator_analytics 
-ADD CONSTRAINT fk_creator_analytics_creator_id 
-FOREIGN KEY (creator_id) REFERENCES creator_profiles(id) ON DELETE CASCADE;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'fk_creator_analytics_creator_id'
+          AND table_name = 'creator_analytics'
+    ) THEN
+        ALTER TABLE creator_analytics 
+        ADD CONSTRAINT fk_creator_analytics_creator_id 
+        FOREIGN KEY (creator_id) REFERENCES creator_profiles(id) ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- Add comments to tables
 COMMENT ON TABLE creator_profiles IS 'Creator profiles for content creators';

@@ -10,9 +10,14 @@ import (
 	"streamshort/migrations"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load environment variables from files (for local/dev)
+	_ = godotenv.Load(".env.local")
+	_ = godotenv.Load()
+
 	var (
 		dbURL  = flag.String("db", "", "Database URL (e.g., postgres://user:pass@host:port/db)")
 		action = flag.String("action", "migrate", "Action to perform: migrate, status, rollback")
@@ -21,7 +26,11 @@ func main() {
 
 	if *dbURL == "" {
 		// Try to get from environment variable
-		*dbURL = os.Getenv("DATABASE_URL")
+		if v := os.Getenv("DATABASE_URL"); v != "" {
+			*dbURL = v
+		} else if v := os.Getenv("DB_URL"); v != "" {
+			*dbURL = v
+		}
 		if *dbURL == "" {
 			log.Fatal("Database URL is required. Set -db flag or DATABASE_URL environment variable")
 		}
