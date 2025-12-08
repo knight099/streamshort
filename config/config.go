@@ -28,6 +28,7 @@ type Config struct {
 	AWSCloudFrontDistributionID string
 	AWSCloudFrontKeyPairID     string
 	AWSCloudFrontPrivateKeyPath string
+	AWSCloudFrontPrivateKey     string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -62,6 +63,7 @@ func LoadConfig() *Config {
 		AWSCloudFrontDistributionID: getEnv("AWS_CLOUDFRONT_DISTRIBUTION_ID", ""),
 		AWSCloudFrontKeyPairID:      getEnv("AWS_CLOUDFRONT_KEY_PAIR_ID", ""),
 		AWSCloudFrontPrivateKeyPath: getEnv("AWS_CLOUDFRONT_PRIVATE_KEY_PATH", ""),
+		AWSCloudFrontPrivateKey:     getEnv("AWS_CLOUDFRONT_PRIVATE_KEY", ""),
 	}
 
 	// Parse earnings RPM (USD per 1000 watch-minutes). Default 1.0

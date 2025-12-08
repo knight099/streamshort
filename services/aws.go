@@ -63,24 +63,33 @@ func NewAWSService(cfg *config.Config) (*AWSService, error) {
 	}
 
 	// Load CloudFront private key if configured
-	if cfg.AWSCloudFrontPrivateKeyPath != "" && cfg.AWSCloudFrontKeyPairID != "" {
-		privateKey, err := loadPrivateKey(cfg.AWSCloudFrontPrivateKeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load CloudFront private key: %w", err)
+	if cfg.AWSCloudFrontKeyPairID != "" {
+		var keyData []byte
+		var err error
+
+		if cfg.AWSCloudFrontPrivateKey != "" {
+			keyData = []byte(cfg.AWSCloudFrontPrivateKey)
+		} else if cfg.AWSCloudFrontPrivateKeyPath != "" {
+			keyData, err = os.ReadFile(cfg.AWSCloudFrontPrivateKeyPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read private key file: %w", err)
+			}
 		}
-		service.cloudFrontPrivateKey = privateKey
+
+		if len(keyData) > 0 {
+			privateKey, err := parsePrivateKey(keyData)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse CloudFront private key: %w", err)
+			}
+			service.cloudFrontPrivateKey = privateKey
+		}
 	}
 
 	return service, nil
 }
 
-// loadPrivateKey loads an RSA private key from a PEM file
-func loadPrivateKey(path string) (*rsa.PrivateKey, error) {
-	keyData, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read private key file: %w", err)
-	}
-
+// parsePrivateKey parses an RSA private key from PEM data
+func parsePrivateKey(keyData []byte) (*rsa.PrivateKey, error) {
 	block, _ := pem.Decode(keyData)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode PEM block")
