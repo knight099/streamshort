@@ -91,6 +91,9 @@ func main() {
 	// Public payment webhook (no authentication required)
 	r.HandleFunc("/payments/webhook", paymentHandler.Webhook).Methods("POST")
 
+	// Public analytics route
+	r.HandleFunc("/analytics/watch", analyticsHandler.RecordWatch).Methods("POST")
+
 	// Auth routes (matching OpenAPI schema)
 	r.HandleFunc("/auth/otp/send", authHandler.SendOTP).Methods("POST")
 	r.HandleFunc("/auth/otp/verify", authHandler.VerifyOTP).Methods("POST")
@@ -124,8 +127,8 @@ func main() {
 	protected.HandleFunc("/me/following", creatorHandler.ListFollowing).Methods("GET")
 
 	// Content routes (protected - creators only)
-	// Analytics
-	protected.HandleFunc("/analytics/watch", analyticsHandler.RecordWatch).Methods("POST")
+	// Analytics (removed from here, moved to public)
+	// protected.HandleFunc("/analytics/watch", analyticsHandler.RecordWatch).Methods("POST")
 	protected.HandleFunc("/content/series", contentHandler.CreateSeries).Methods("POST")
 	protected.HandleFunc("/content/series/{id}", contentHandler.UpdateSeries).Methods("PUT")
 	protected.HandleFunc("/content/series/{id}/episodes", contentHandler.CreateEpisode).Methods("POST")
