@@ -152,6 +152,28 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Record Revenue for Monthly Payout Calculation
+	// Assume 70/30 Split
+	platformFee := planAmount * 0.30
+	distributable := planAmount * 0.70
+
+	// Determine the month this revenue belongs to (Current Month)
+	monthDate := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	rev := models.SubscriptionRevenue{
+		UserID:         userID,
+		SubscriptionID: subscription.ID,
+		MonthDate:      monthDate,
+		Amount:         planAmount,
+		Distributable:  distributable,
+		PlatformFee:    platformFee,
+		IsDistributed:  false,
+	}
+	if err := h.db.Create(&rev).Error; err != nil {
+		fmt.Printf("Failed to create revenue record: %v\n", err)
+		// Proceed without failing the request, but log critical error
+	}
+
 	// In real implementation, this would integrate with Razorpay
 	// For now, we'll return a mock response
 	response := CreateSubscriptionResponse{

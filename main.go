@@ -74,6 +74,9 @@ func main() {
 
 	// Create router
 	r := mux.NewRouter()
+	
+	// Add Request Logger Middleware
+	r.Use(middleware.RequestLoggerMiddleware)
 
 	// Public routes
 	r.HandleFunc("/", helloHandler).Methods("GET")

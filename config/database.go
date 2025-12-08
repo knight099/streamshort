@@ -55,7 +55,8 @@ func InitDB() *gorm.DB {
 
 	// Configure GORM
 	config := &gorm.Config{
-		Logger:                                   logger.Default.LogMode(logger.Info),
+		// Disable SQL logging (set to Error or Silent to avoid query logs)
+		Logger:                                   logger.Default.LogMode(logger.Error),
 		DisableForeignKeyConstraintWhenMigrating: true,
 	}
 
