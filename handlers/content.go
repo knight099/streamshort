@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"streamshort/models"
+	"streamshort/services"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
@@ -22,14 +22,15 @@ import (
 type ContentHandler struct {
 	db  *gorm.DB
 	rdb *redis.Client
+	aws *services.AWSService
 }
 
 func NewContentHandler(db *gorm.DB) *ContentHandler {
 	return &ContentHandler{db: db}
 }
 
-func NewContentHandlerWithServices(db *gorm.DB, rdb *redis.Client) *ContentHandler {
-	return &ContentHandler{db: db, rdb: rdb}
+func NewContentHandlerWithServices(db *gorm.DB, rdb *redis.Client, aws *services.AWSService) *ContentHandler {
+	return &ContentHandler{db: db, rdb: rdb, aws: aws}
 }
 
 // Request/Response structs matching OpenAPI schema
@@ -109,6 +110,7 @@ type UploadUrlResponse struct {
 type UploadNotifyRequest struct {
 	S3Path    string `json:"s3_path"`
 	SizeBytes int64  `json:"size_bytes"`
+	EpisodeID string `json:"episode_id"` // Optional: link upload to episode
 }
 
 type UploadNotifyResponse struct {
@@ -634,10 +636,7 @@ func (h *ContentHandler) RequestUploadURL(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Generate upload ID
-	uploadID := fmt.Sprintf("upl_%s", uuid.New().String()[:8])
-
-	// Create upload request record
+	// Create upload request record (ID is auto-generated as UUID by the database)
 	uploadReq := models.UploadRequest{
 		UserID:      userID,
 		Filename:    req.Filename,
@@ -652,12 +651,35 @@ func (h *ContentHandler) RequestUploadURL(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// TODO: In production, integrate with AWS S3 to generate actual pre-signed URL
-	// For now, return a mock response
+	// Use the database-generated UUID as the upload ID
+	uploadID := uploadReq.ID
+
+	var presignedURL string
+	expiresIn := 3600 // 1 hour
+
+	// Generate real S3 pre-signed URL if AWS is configured
+	if h.aws != nil && h.aws.IsConfigured() {
+		var err error
+		presignedURL, err = h.aws.GenerateUploadPresignedURL(
+			r.Context(),
+			uploadID,
+			req.Filename,
+			req.ContentType,
+			time.Duration(expiresIn)*time.Second,
+		)
+		if err != nil {
+			http.Error(w, "Failed to generate upload URL", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Fallback to mock URL for development
+		presignedURL = fmt.Sprintf("https://s3.amazonaws.com/bucket/%s?AWSAccessKeyId=mock&Signature=mock", uploadID)
+	}
+
 	response := UploadUrlResponse{
 		UploadID:     uploadID,
-		PresignedURL: fmt.Sprintf("https://s3.amazonaws.com/bucket/%s?AWSAccessKeyId=mock&Signature=mock", uploadID),
-		ExpiresIn:    3600,
+		PresignedURL: presignedURL,
+		ExpiresIn:    expiresIn,
 		UploadHeaders: map[string]string{
 			"Content-Type": req.ContentType,
 		},
@@ -700,6 +722,28 @@ func (h *ContentHandler) NotifyUploadComplete(w http.ResponseWriter, r *http.Req
 		}).Error; err != nil {
 		http.Error(w, "Failed to update upload status", http.StatusInternalServerError)
 		return
+	}
+
+	// If episode_id is provided, update the episode's s3_master_path
+	if req.EpisodeID != "" {
+		// Verify ownership: episode belongs to a series owned by this creator
+		var episode models.Episode
+		err := h.db.Joins("JOIN series ON episodes.series_id = series.id").
+			Joins("JOIN creator_profiles ON series.creator_id = creator_profiles.id").
+			Where("episodes.id = ? AND creator_profiles.user_id = ?", req.EpisodeID, userID).
+			First(&episode).Error
+
+		if err == nil {
+			// Update episode with the S3 path
+			if err := h.db.Model(&episode).Updates(map[string]interface{}{
+				"s3_master_path": req.S3Path,
+				"status":         "queued_transcode",
+				"updated_at":     time.Now(),
+			}).Error; err != nil {
+				// Log error but don't fail the request
+				fmt.Printf("Warning: Failed to update episode s3_master_path: %v\n", err)
+			}
+		}
 	}
 
 	// TODO: In production, trigger transcoding job here
@@ -765,11 +809,108 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	// TODO: In production, generate actual signed URL with expiration
-	// For now, return a mock response
+	var videoURL string
+	var expiresAt time.Time
+	expiresIn := 1 * time.Hour
+
+	// Check if we have HLS manifest URL (transcoded content)
+	if episode.HLSManifestURL != nil && *episode.HLSManifestURL != "" {
+		// Use transcoded HLS manifest
+		if h.aws != nil && h.aws.IsCloudFrontConfigured() {
+			var err error
+			videoURL, expiresAt, err = h.aws.GenerateManifestURL(episodeID, expiresIn)
+			if err != nil {
+				http.Error(w, "Failed to generate manifest URL", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			expiresAt = time.Now().Add(expiresIn)
+			videoURL = *episode.HLSManifestURL
+		}
+	} else if episode.S3MasterPath != nil && *episode.S3MasterPath != "" {
+		// No HLS yet - serve the raw MP4 via CloudFront (for development)
+		// Extract the path from s3://bucket/path format
+		s3Path := *episode.S3MasterPath
+		var objectPath string
+
+		if strings.HasPrefix(s3Path, "s3://") {
+			// Remove s3:// scheme
+			withoutScheme := strings.TrimPrefix(s3Path, "s3://")
+			// Find the first slash to separate bucket from key
+			slashIndex := strings.Index(withoutScheme, "/")
+			if slashIndex != -1 && slashIndex+1 < len(withoutScheme) {
+				objectPath = withoutScheme[slashIndex+1:]
+			}
+		}
+
+		if objectPath != "" {
+			// Ensure object path is properly URL encoded if needed, but AWS SDK might handle signing correctly
+			// For now, let's just pass the path.
+			// Debug log (in production use proper logger)
+			fmt.Printf("Generating CloudFront URL for path: %s\n", objectPath)
+
+			if h.aws != nil && h.aws.IsCloudFrontConfigured() {
+				var err error
+				videoURL, expiresAt, err = h.aws.GenerateCloudFrontSignedURL(objectPath, expiresIn)
+				if err != nil {
+					http.Error(w, "Failed to generate video URL", http.StatusInternalServerError)
+					return
+				}
+			} else {
+				// Fallback: direct CloudFront URL without signing (for dev)
+				expiresAt = time.Now().Add(expiresIn)
+				cloudFrontDomain := "djoxr6aauqbf6.cloudfront.net"
+				if h.aws != nil && h.aws.GetCloudFrontDomain() != "" {
+					cloudFrontDomain = h.aws.GetCloudFrontDomain()
+				}
+				videoURL = fmt.Sprintf("https://%s/%s", cloudFrontDomain, objectPath)
+			}
+		} else {
+			// Fallback to simple split if s3:// prefix not found or parsing failed
+			// This might be for paths stored without s3:// prefix
+			pathParts := strings.SplitN(s3Path, "/", 4)
+			if len(pathParts) >= 4 {
+				// ... existing logic fallback ...
+				objectPath = pathParts[3]
+				// duplicate logic... let's just fail if path is invalid
+			}
+
+			if objectPath == "" {
+				// Try to use the path as is if it doesn't look like a full S3 URI
+				if !strings.HasPrefix(s3Path, "s3://") {
+					objectPath = s3Path
+				} else {
+					http.Error(w, "Invalid S3 path format", http.StatusInternalServerError)
+					return
+				}
+			}
+
+			// Retry generation with fallback path
+			if h.aws != nil && h.aws.IsCloudFrontConfigured() {
+				var err error
+				videoURL, expiresAt, err = h.aws.GenerateCloudFrontSignedURL(objectPath, expiresIn)
+				if err != nil {
+					http.Error(w, "Failed to generate video URL", http.StatusInternalServerError)
+					return
+				}
+			} else {
+				expiresAt = time.Now().Add(expiresIn)
+				cloudFrontDomain := "djoxr6aauqbf6.cloudfront.net"
+				if h.aws != nil && h.aws.GetCloudFrontDomain() != "" {
+					cloudFrontDomain = h.aws.GetCloudFrontDomain()
+				}
+				videoURL = fmt.Sprintf("https://%s/%s", cloudFrontDomain, objectPath)
+			}
+		}
+	} else {
+		// No video content available
+		http.Error(w, "Episode video not available", http.StatusNotFound)
+		return
+	}
+
 	response := ManifestResponse{
-		ManifestURL: fmt.Sprintf("https://cdn.streamshort.com/hls/%s/index.m3u8?Expires=%d&Signature=mock", episodeID, time.Now().Add(1*time.Hour).Unix()),
-		ExpiresAt:   time.Now().Add(1 * time.Hour),
+		ManifestURL: videoURL,
+		ExpiresAt:   expiresAt,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

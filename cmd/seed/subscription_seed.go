@@ -89,14 +89,13 @@ func seedTestSubscriptions(db *gorm.DB) error {
 			ID:         uuid.New().String(),
 			UserID:     user.ID,
 			TargetType: "series",
-			TargetID:   series[i].ID,
 			Status:     "active",
 			StartDate:  time.Now().AddDate(0, 0, -15), // Started 15 days ago
 			EndDate:    time.Now().AddDate(0, 0, 15),  // Expires in 15 days
 			AutoRenew:  true,
 			PlanID:     "plan_basic_monthly",
-			Amount:     99.0,
-			Currency:  "INR",
+			Amount:     30.0,
+			Currency:   "INR",
 			CreatedAt:  time.Now(),
 			UpdatedAt:  time.Now(),
 		}

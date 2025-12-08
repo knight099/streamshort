@@ -18,6 +18,16 @@ type Config struct {
 	FirebaseProjectID       string
 	RecaptchaSiteKey        string
 	CreatorRPMUSDPer1000Min float64
+
+	// AWS Configuration
+	AWSRegion                  string
+	AWSAccessKeyID             string
+	AWSSecretAccessKey         string
+	AWSS3Bucket                string
+	AWSCloudFrontDomain        string
+	AWSCloudFrontDistributionID string
+	AWSCloudFrontKeyPairID     string
+	AWSCloudFrontPrivateKeyPath string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -42,6 +52,16 @@ func LoadConfig() *Config {
 		FirebaseAPIKey:    getEnv("FIREBASE_API_KEY", ""),
 		FirebaseProjectID: getEnv("FIREBASE_PROJECT_ID", ""),
 		RecaptchaSiteKey:  getEnv("RECAPTCHA_SITE_KEY", ""),
+
+		// AWS Configuration
+		AWSRegion:                   getEnv("AWS_REGION", "ap-south-1"),
+		AWSAccessKeyID:              getEnv("AWS_ACCESS_KEY_ID", ""),
+		AWSSecretAccessKey:          getEnv("AWS_SECRET_ACCESS_KEY", ""),
+		AWSS3Bucket:                 getEnv("AWS_S3_BUCKET", ""),
+		AWSCloudFrontDomain:         getEnv("AWS_CLOUDFRONT_DOMAIN", ""),
+		AWSCloudFrontDistributionID: getEnv("AWS_CLOUDFRONT_DISTRIBUTION_ID", ""),
+		AWSCloudFrontKeyPairID:      getEnv("AWS_CLOUDFRONT_KEY_PAIR_ID", ""),
+		AWSCloudFrontPrivateKeyPath: getEnv("AWS_CLOUDFRONT_PRIVATE_KEY_PATH", ""),
 	}
 
 	// Parse earnings RPM (USD per 1000 watch-minutes). Default 1.0

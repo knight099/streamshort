@@ -7,6 +7,7 @@ import (
 	"streamshort/config"
 	"streamshort/handlers"
 	"streamshort/middleware"
+	"streamshort/services"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -41,10 +42,26 @@ func main() {
 	// Initialize services (DB, Redis, Elasticsearch)
 	svcs := config.InitServices()
 
+	// Initialize AWS service
+	awsService, err := services.NewAWSService(cfg)
+	if err != nil {
+		log.Printf("Warning: AWS service initialization failed: %v", err)
+		log.Println("S3 uploads and CloudFront signed URLs will use mock responses")
+	} else if awsService != nil {
+		log.Println("AWS service initialized successfully")
+		if awsService.IsCloudFrontConfigured() {
+			log.Println("CloudFront signing is configured")
+		} else {
+			log.Println("CloudFront signing not configured - using mock URLs for manifests")
+		}
+	} else {
+		log.Println("AWS credentials not configured - using mock responses for S3 and CloudFront")
+	}
+
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(svcs.DB, svcs.FirebaseAPIKey)
 	creatorHandler := handlers.NewCreatorHandler(svcs.DB)
-	contentHandler := handlers.NewContentHandlerWithServices(svcs.DB, svcs.RDB)
+	contentHandler := handlers.NewContentHandlerWithServices(svcs.DB, svcs.RDB, awsService)
 	paymentHandler := handlers.NewPaymentHandler(svcs.DB)
 	subscriptionHandler := handlers.NewSubscriptionHandler(svcs.DB)
 	socialHandler := handlers.NewSocialHandler(svcs.DB)
