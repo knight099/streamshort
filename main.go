@@ -58,11 +58,17 @@ func main() {
 		log.Println("AWS credentials not configured - using mock responses for S3 and CloudFront")
 	}
 
+	// Initialize Razorpay client
+	razorpayClient := services.NewRazorpayClient(cfg.RazorpayKeyID, cfg.RazorpayKeySecret)
+	if cfg.RazorpayKeyID == "" || cfg.RazorpayKeySecret == "" {
+		log.Println("Warning: Razorpay credentials not configured - payment features will be limited")
+	}
+
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(svcs.DB, svcs.FirebaseAPIKey)
 	creatorHandler := handlers.NewCreatorHandler(svcs.DB)
 	contentHandler := handlers.NewContentHandlerWithServices(svcs.DB, svcs.RDB, awsService)
-	paymentHandler := handlers.NewPaymentHandler(svcs.DB)
+	paymentHandler := handlers.NewPaymentHandler(svcs.DB, razorpayClient)
 	subscriptionHandler := handlers.NewSubscriptionHandler(svcs.DB)
 	socialHandler := handlers.NewSocialHandler(svcs.DB)
 	userHandler := handlers.NewUserHandler(svcs.DB)

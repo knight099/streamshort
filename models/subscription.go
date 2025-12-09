@@ -12,7 +12,7 @@ type Subscription struct {
 	UserID                 string         `json:"user_id" gorm:"type:uuid;not null;index:idx_subscriptions_user_id"`
 	TargetType             string         `json:"target_type" gorm:"type:varchar(20);not null;check:target_type IN ('series', 'creator', 'global')"`
 	RazorpaySubscriptionID *string        `json:"razorpay_subscription_id" gorm:"type:varchar(255)"`
-	Status                 string         `json:"status" gorm:"type:varchar(20);default:'active';check:status IN ('active', 'cancelled', 'expired')"`
+	Status                 string         `json:"status" gorm:"type:varchar(20);default:'pending';check:status IN ('pending', 'active', 'cancelled', 'expired', 'halted')"`
 	StartDate              time.Time      `json:"start_date" gorm:"not null"`
 	EndDate                time.Time      `json:"end_date" gorm:"not null"`
 	AutoRenew              bool           `json:"auto_renew" gorm:"default:true"`

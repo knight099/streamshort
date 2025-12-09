@@ -3,21 +3,24 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"streamshort/models"
+	"streamshort/services"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type PaymentHandler struct {
-	db *gorm.DB
+	db            *gorm.DB
+	razorpayClient *services.RazorpayClient
 }
 
-func NewPaymentHandler(db *gorm.DB) *PaymentHandler {
-	return &PaymentHandler{db: db}
+func NewPaymentHandler(db *gorm.DB, razorpayClient *services.RazorpayClient) *PaymentHandler {
+	return &PaymentHandler{db: db, razorpayClient: razorpayClient}
 }
 
 // Request/Response structs matching OpenAPI schema
@@ -128,62 +131,119 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 	planAmount := plan.Amount
 	planDuration := plan.Duration
 
-	// Create subscription record
-	subscriptionID := uuid.New().String()
-	now := time.Now()
-	endDate := now.AddDate(0, 0, planDuration)
+	// Check if Razorpay is configured
+	if h.razorpayClient == nil || h.razorpayClient.KeyID == "" {
+		http.Error(w, "Payment gateway not configured", http.StatusInternalServerError)
+		return
+	}
 
+	// First, create subscription in Razorpay
+	// Note: You need to create a Razorpay Plan first (plan_id should be Razorpay plan ID like "plan_xxxxx")
+	// For now, we'll assume plan_id in DB maps to Razorpay plan_id
+	// If your plan_id is not a Razorpay plan_id, you'll need to map it or create plans in Razorpay first
+	
+	totalCount := 1 // For one-time payment, set to 1. For recurring, set appropriate count
+	if req.AutoRenew {
+		// For monthly: 12, yearly: 1, etc. Adjust based on your plan
+		if planDuration == 30 {
+			totalCount = 12 // Monthly plan, 12 months
+		} else if planDuration == 365 {
+			totalCount = 1 // Yearly plan, 1 payment
+		}
+	}
+
+	razorpayResp, err := h.razorpayClient.CreateSubscription(req.PlanID, 1, totalCount, 0)
+	if err != nil {
+		log.Printf("[payment] Failed to create Razorpay subscription: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to create subscription: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	razorpaySubID, ok := razorpayResp["id"].(string)
+	if !ok {
+		log.Printf("[payment] Invalid Razorpay response: %v", razorpayResp)
+		http.Error(w, "Invalid response from payment gateway", http.StatusInternalServerError)
+		return
+	}
+
+	// Extract dates from Razorpay response
+	now := time.Now()
+	var startDate, endDate time.Time
+	var status string = "pending" // Start as pending, activate on webhook
+
+	if startAt, ok := razorpayResp["start_at"].(float64); ok && startAt > 0 {
+		startDate = time.Unix(int64(startAt), 0)
+	} else {
+		startDate = now
+	}
+
+	if endAt, ok := razorpayResp["end_at"].(float64); ok && endAt > 0 {
+		endDate = time.Unix(int64(endAt), 0)
+	} else {
+		endDate = startDate.AddDate(0, 0, planDuration)
+	}
+
+	if subStatus, ok := razorpayResp["status"].(string); ok {
+		status = subStatus
+	}
+
+	// Create subscription record in our DB
+	subscriptionID := uuid.New().String()
 	subscription := models.Subscription{
-		ID:         subscriptionID,
-		UserID:     userID,
-		TargetType: req.TargetType,
-		Status:     "active",
-		StartDate:  now,
-		EndDate:    endDate,
-		AutoRenew:  req.AutoRenew,
-		PlanID:     req.PlanID,
-		Amount:     planAmount,
-		Currency:   "INR",
+		ID:                     subscriptionID,
+		UserID:                 userID,
+		TargetType:             req.TargetType,
+		RazorpaySubscriptionID: &razorpaySubID,
+		Status:                 status,
+		StartDate:              startDate,
+		EndDate:                endDate,
+		AutoRenew:              req.AutoRenew,
+		PlanID:                 req.PlanID,
+		Amount:                 planAmount,
+		Currency:               "INR",
 	}
 
 	// Save to database
 	if err := h.db.Create(&subscription).Error; err != nil {
+		log.Printf("[payment] Failed to save subscription to DB: %v", err)
 		http.Error(w, "Failed to create subscription", http.StatusInternalServerError)
 		return
 	}
 
-	// Record Revenue for Monthly Payout Calculation
-	// Assume 70/30 Split
-	platformFee := planAmount * 0.30
-	distributable := planAmount * 0.70
-
-	// Determine the month this revenue belongs to (Current Month)
-	monthDate := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-
-	rev := models.SubscriptionRevenue{
-		UserID:         userID,
-		SubscriptionID: subscription.ID,
-		MonthDate:      monthDate,
-		Amount:         planAmount,
-		Distributable:  distributable,
-		PlatformFee:    platformFee,
-		IsDistributed:  false,
-	}
-	if err := h.db.Create(&rev).Error; err != nil {
-		fmt.Printf("Failed to create revenue record: %v\n", err)
-		// Proceed without failing the request, but log critical error
+	// Create payment link for checkout
+	paymentLinkResp, err := h.razorpayClient.CreatePaymentLink(
+		razorpaySubID,
+		planAmount,
+		"INR",
+		fmt.Sprintf("Subscription for %s", req.PlanID),
+	)
+	if err != nil {
+		log.Printf("[payment] Failed to create payment link: %v", err)
+		// Continue anyway, we can use the subscription ID for checkout
 	}
 
-	// In real implementation, this would integrate with Razorpay
-	// For now, we'll return a mock response
+	var checkoutURL string
+	if paymentLinkResp != nil {
+		if shortURL, ok := paymentLinkResp["short_url"].(string); ok {
+			checkoutURL = shortURL
+		} else if url, ok := paymentLinkResp["url"].(string); ok {
+			checkoutURL = url
+		}
+	}
+
+	// Fallback: Use Razorpay checkout URL with subscription ID
+	if checkoutURL == "" {
+		checkoutURL = fmt.Sprintf("https://checkout.razorpay.com/v1/subscription/%s", razorpaySubID)
+	}
+
 	response := CreateSubscriptionResponse{
-		SubscriptionID: subscriptionID,
-		Status:         "active",
+		SubscriptionID: razorpaySubID, // Return Razorpay subscription ID, not our UUID
+		Status:         status,
 		PlanID:         req.PlanID,
-		StartDate:      now,
+		StartDate:      startDate,
 		EndDate:        endDate,
 		NextBilling:    endDate,
-		CheckoutURL:    fmt.Sprintf("https://checkout.razorpay.com/v1/checkout.js?subscription_id=%s", subscriptionID),
+		CheckoutURL:    checkoutURL,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -191,40 +251,58 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(response)
 }
 
-// Webhook handles payment webhooks from payment providers
+// Webhook handles payment webhooks from Razorpay
 func (h *PaymentHandler) Webhook(w http.ResponseWriter, r *http.Request) {
-	var req WebhookRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// Razorpay sends webhook as JSON with event and payload fields
+	var webhookPayload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&webhookPayload); err != nil {
+		log.Printf("[webhook] Failed to decode webhook payload: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Validate webhook signature (in real implementation)
-	if req.Signature == "" {
-		http.Error(w, "Missing signature", http.StatusUnauthorized)
+	// Extract event name (Razorpay format: "subscription.charged", "subscription.activated", etc.)
+	event, ok := webhookPayload["event"].(string)
+	if !ok {
+		log.Printf("[webhook] Missing event field in webhook payload")
+		http.Error(w, "Missing event field", http.StatusBadRequest)
 		return
 	}
 
+	// Extract payload (contains the subscription/payment data)
+	payload, ok := webhookPayload["payload"].(map[string]interface{})
+	if !ok {
+		// Sometimes Razorpay sends data directly, try that
+		payload = webhookPayload
+	}
+
+	log.Printf("[webhook] Received event: %s", event)
+
 	// Process webhook based on event type
-	switch req.EventType {
+	switch event {
+	case "subscription.charged":
+		// Payment successful - activate subscription and record revenue
+		h.handleSubscriptionCharged(payload)
 	case "subscription.activated":
-		// Handle subscription activation
-		h.handleSubscriptionActivated(req.Data)
+		// Subscription activated
+		h.handleSubscriptionActivated(payload)
 	case "subscription.updated":
-		// Handle subscription updates
-		h.handleSubscriptionUpdated(req.Data)
+		// Subscription updated
+		h.handleSubscriptionUpdated(payload)
 	case "subscription.cancelled":
-		// Handle subscription cancellation
-		h.handleSubscriptionCancelled(req.Data)
-	case "payment.succeeded":
-		// Handle successful payment
-		h.handlePaymentSucceeded(req.Data)
+		// Subscription cancelled
+		h.handleSubscriptionCancelled(payload)
+	case "subscription.halted":
+		// Payment failed, subscription halted
+		h.handleSubscriptionHalted(payload)
+	case "subscription.completed":
+		// Subscription completed (all cycles done)
+		h.handleSubscriptionCompleted(payload)
 	case "payment.failed":
-		// Handle failed payment
-		h.handlePaymentFailed(req.Data)
+		// Payment failed
+		h.handlePaymentFailed(payload)
 	default:
-		// Unknown event type
-		break
+		log.Printf("[webhook] Unknown event type: %s", event)
 	}
 
 	response := WebhookResponse{
@@ -236,40 +314,190 @@ func (h *PaymentHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// handleSubscriptionCharged processes subscription.charged webhook (payment successful)
+func (h *PaymentHandler) handleSubscriptionCharged(data map[string]interface{}) {
+	// Razorpay sends subscription object in payload.subscription.entity
+	subscriptionEntity, ok := data["subscription"].(map[string]interface{})
+	if !ok {
+		if entity, ok := data["entity"].(map[string]interface{}); ok {
+			subscriptionEntity = entity
+		} else {
+			log.Printf("[webhook] subscription.charged: missing subscription entity")
+			return
+		}
+	}
+
+	razorpaySubID, ok := subscriptionEntity["id"].(string)
+	if !ok {
+		log.Printf("[webhook] subscription.charged: missing subscription id")
+		return
+	}
+
+	// Find subscription by Razorpay subscription ID
+	var subscription models.Subscription
+	if err := h.db.Where("razorpay_subscription_id = ?", razorpaySubID).First(&subscription).Error; err != nil {
+		log.Printf("[webhook] subscription.charged: subscription not found: %v", err)
+		return
+	}
+
+	// Extract payment amount
+	var amount float64
+	if paymentEntity, ok := data["payment"].(map[string]interface{}); ok {
+		if amt, ok := paymentEntity["amount"].(float64); ok {
+			amount = amt / 100.0 // Razorpay sends amount in paise
+		}
+	}
+
+	// Update subscription status to active
+	h.db.Model(&subscription).Update("status", "active")
+
+	// Record Revenue for Monthly Payout Calculation
+	now := time.Now()
+	monthDate := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	platformFee := amount * 0.30
+	distributable := amount * 0.70
+
+	rev := models.SubscriptionRevenue{
+		UserID:         subscription.UserID,
+		SubscriptionID: subscription.ID,
+		MonthDate:      monthDate,
+		Amount:         amount,
+		Distributable:  distributable,
+		PlatformFee:    platformFee,
+		IsDistributed:  false,
+	}
+	if err := h.db.Create(&rev).Error; err != nil {
+		log.Printf("[webhook] subscription.charged: failed to create revenue record: %v", err)
+	}
+
+	log.Printf("[webhook] subscription.charged: activated subscription %s, recorded revenue %.2f", razorpaySubID, amount)
+}
+
 // handleSubscriptionActivated processes subscription activation webhook
 func (h *PaymentHandler) handleSubscriptionActivated(data map[string]interface{}) {
-	// Extract subscription data from webhook
-	if subscriptionID, ok := data["subscription_id"].(string); ok {
-		// Update subscription status in database
-		h.db.Model(&models.Subscription{}).
-			Where("id = ?", subscriptionID).
-			Update("status", "active")
+	subscriptionEntity, ok := data["subscription"].(map[string]interface{})
+	if !ok {
+		if entity, ok := data["entity"].(map[string]interface{}); ok {
+			subscriptionEntity = entity
+		} else {
+			return
+		}
 	}
+
+	razorpaySubID, ok := subscriptionEntity["id"].(string)
+	if !ok {
+		return
+	}
+
+	h.db.Model(&models.Subscription{}).
+		Where("razorpay_subscription_id = ?", razorpaySubID).
+		Update("status", "active")
+	
+	log.Printf("[webhook] subscription.activated: activated subscription %s", razorpaySubID)
 }
 
 // handleSubscriptionUpdated processes subscription update webhook
 func (h *PaymentHandler) handleSubscriptionUpdated(data map[string]interface{}) {
-	// Handle subscription updates
+	// Handle subscription updates (e.g., plan changes, end date changes)
+	subscriptionEntity, ok := data["subscription"].(map[string]interface{})
+	if !ok {
+		if entity, ok := data["entity"].(map[string]interface{}); ok {
+			subscriptionEntity = entity
+		} else {
+			return
+		}
+	}
+
+	razorpaySubID, ok := subscriptionEntity["id"].(string)
+	if !ok {
+		return
+	}
+
+	// Update end date if provided
+	if endAt, ok := subscriptionEntity["end_at"].(float64); ok && endAt > 0 {
+		endDate := time.Unix(int64(endAt), 0)
+		h.db.Model(&models.Subscription{}).
+			Where("razorpay_subscription_id = ?", razorpaySubID).
+			Update("end_date", endDate)
+	}
+
+	log.Printf("[webhook] subscription.updated: updated subscription %s", razorpaySubID)
 }
 
 // handleSubscriptionCancelled processes subscription cancellation webhook
 func (h *PaymentHandler) handleSubscriptionCancelled(data map[string]interface{}) {
-	if subscriptionID, ok := data["subscription_id"].(string); ok {
-		// Update subscription status in database
-		h.db.Model(&models.Subscription{}).
-			Where("id = ?", subscriptionID).
-			Update("status", "cancelled")
+	subscriptionEntity, ok := data["subscription"].(map[string]interface{})
+	if !ok {
+		if entity, ok := data["entity"].(map[string]interface{}); ok {
+			subscriptionEntity = entity
+		} else {
+			return
+		}
 	}
+
+	razorpaySubID, ok := subscriptionEntity["id"].(string)
+	if !ok {
+		return
+	}
+
+	h.db.Model(&models.Subscription{}).
+		Where("razorpay_subscription_id = ?", razorpaySubID).
+		Update("status", "cancelled")
+	
+	log.Printf("[webhook] subscription.cancelled: cancelled subscription %s", razorpaySubID)
 }
 
-// handlePaymentSucceeded processes successful payment webhook
-func (h *PaymentHandler) handlePaymentSucceeded(data map[string]interface{}) {
-	// Handle successful payment
+// handleSubscriptionHalted processes subscription halted webhook (payment failed)
+func (h *PaymentHandler) handleSubscriptionHalted(data map[string]interface{}) {
+	subscriptionEntity, ok := data["subscription"].(map[string]interface{})
+	if !ok {
+		if entity, ok := data["entity"].(map[string]interface{}); ok {
+			subscriptionEntity = entity
+		} else {
+			return
+		}
+	}
+
+	razorpaySubID, ok := subscriptionEntity["id"].(string)
+	if !ok {
+		return
+	}
+
+	// You might want to add a "halted" or "past_due" status
+	h.db.Model(&models.Subscription{}).
+		Where("razorpay_subscription_id = ?", razorpaySubID).
+		Update("status", "cancelled") // Or create a "halted" status
+	
+	log.Printf("[webhook] subscription.halted: halted subscription %s", razorpaySubID)
+}
+
+// handleSubscriptionCompleted processes subscription completed webhook
+func (h *PaymentHandler) handleSubscriptionCompleted(data map[string]interface{}) {
+	subscriptionEntity, ok := data["subscription"].(map[string]interface{})
+	if !ok {
+		if entity, ok := data["entity"].(map[string]interface{}); ok {
+			subscriptionEntity = entity
+		} else {
+			return
+		}
+	}
+
+	razorpaySubID, ok := subscriptionEntity["id"].(string)
+	if !ok {
+		return
+	}
+
+	h.db.Model(&models.Subscription{}).
+		Where("razorpay_subscription_id = ?", razorpaySubID).
+		Update("status", "expired")
+	
+	log.Printf("[webhook] subscription.completed: completed subscription %s", razorpaySubID)
 }
 
 // handlePaymentFailed processes failed payment webhook
 func (h *PaymentHandler) handlePaymentFailed(data map[string]interface{}) {
-	// Handle failed payment
+	log.Printf("[webhook] payment.failed: %v", data)
+	// Handle failed payment - might want to notify user or update subscription status
 }
 
 // CheckUserSubscription checks if a user has an active subscription to specific content
