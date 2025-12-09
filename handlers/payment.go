@@ -157,7 +157,7 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 
 	razorpayResp, err := h.razorpayClient.CreateSubscription(razorpayPlanID, 1, totalCount, 0)
 	if err != nil {
-		log.Printf("[payment] Failed to create Razorpay subscription: %v", err)
+		log.Printf("[payment] Failed to create Razorpay subscription for plan %s (Razorpay ID: %s): %v", req.PlanID, razorpayPlanID, err)
 		http.Error(w, fmt.Sprintf("Failed to create subscription: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -208,8 +208,8 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 
 	// Save to database
 	if err := h.db.Create(&subscription).Error; err != nil {
-		log.Printf("[payment] Failed to save subscription to DB: %v", err)
-		http.Error(w, "Failed to create subscription", http.StatusInternalServerError)
+		log.Printf("[payment] Failed to save subscription to DB (UserID: %s, RazorpaySubID: %s): %v", userID, razorpaySubID, err)
+		http.Error(w, fmt.Sprintf("Failed to save subscription: %v", err), http.StatusInternalServerError)
 		return
 	}
 
