@@ -29,16 +29,17 @@ type Subscription struct {
 
 // SubscriptionPlan represents available subscription plans
 type SubscriptionPlan struct {
-	ID          string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	Name        string         `json:"name" gorm:"type:varchar(100);not null"`
-	Description string         `json:"description" gorm:"type:text"`
-	Duration    int            `json:"duration" gorm:"type:int;not null"` // Duration in days
-	Amount      float64        `json:"amount" gorm:"type:decimal(10,2);not null"`
-	Currency    string         `json:"currency" gorm:"type:varchar(3);default:'INR'"`
-	IsActive    bool           `json:"is_active" gorm:"default:true"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+	ID               string         `json:"id" gorm:"primaryKey;type:varchar(255)"`
+	Name             string         `json:"name" gorm:"type:varchar(100);not null"`
+	Description      string         `json:"description" gorm:"type:text"`
+	Duration         int            `json:"duration" gorm:"type:int;not null"` // Duration in days
+	Amount           float64        `json:"amount" gorm:"type:decimal(10,2);not null"`
+	Currency         string         `json:"currency" gorm:"type:varchar(3);default:'INR'"`
+	RazorpayPlanID   string         `json:"razorpay_plan_id" gorm:"type:varchar(255)"` // Maps to Razorpay plan ID
+	IsActive         bool           `json:"is_active" gorm:"default:true"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+	DeletedAt        gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 }
 
 // IsActive checks if the subscription is currently active

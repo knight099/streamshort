@@ -137,11 +137,14 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// First, create subscription in Razorpay
-	// Note: You need to create a Razorpay Plan first (plan_id should be Razorpay plan ID like "plan_xxxxx")
-	// For now, we'll assume plan_id in DB maps to Razorpay plan_id
-	// If your plan_id is not a Razorpay plan_id, you'll need to map it or create plans in Razorpay first
-	
+	// Get Razorpay plan ID (must be set in database)
+	razorpayPlanID := plan.RazorpayPlanID
+	if razorpayPlanID == "" {
+		log.Printf("[payment] Plan %s missing razorpay_plan_id", req.PlanID)
+		http.Error(w, fmt.Sprintf("Plan %s is not configured with Razorpay. Please contact support.", req.PlanID), http.StatusBadRequest)
+		return
+	}
+
 	totalCount := 1 // For one-time payment, set to 1. For recurring, set appropriate count
 	if req.AutoRenew {
 		// For monthly: 12, yearly: 1, etc. Adjust based on your plan
@@ -152,7 +155,7 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	razorpayResp, err := h.razorpayClient.CreateSubscription(req.PlanID, 1, totalCount, 0)
+	razorpayResp, err := h.razorpayClient.CreateSubscription(razorpayPlanID, 1, totalCount, 0)
 	if err != nil {
 		log.Printf("[payment] Failed to create Razorpay subscription: %v", err)
 		http.Error(w, fmt.Sprintf("Failed to create subscription: %v", err), http.StatusInternalServerError)
