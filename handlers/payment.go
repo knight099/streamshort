@@ -152,7 +152,22 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 	}
 
 	if subStatus, ok := razorpayResp["status"].(string); ok {
-		status = subStatus
+		// Map Razorpay statuses to our allowed set
+		switch subStatus {
+		case "created", "initiated":
+			status = "pending"
+		case "authenticated", "active":
+			status = "active"
+		case "halted", "paused":
+			status = "halted"
+		case "cancelled":
+			status = "cancelled"
+		case "expired":
+			status = "expired"
+		default:
+			// Fallback to pending for any unexpected status to avoid DB constraint violation
+			status = "pending"
+		}
 	}
 
 	// Create subscription record in our DB
