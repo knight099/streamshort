@@ -300,14 +300,22 @@ func (h *PaymentHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 // handleSubscriptionCharged processes subscription.charged webhook (payment successful)
 func (h *PaymentHandler) handleSubscriptionCharged(data map[string]interface{}) {
 	// Razorpay sends subscription object in payload.subscription.entity
-	subscriptionEntity, ok := data["subscription"].(map[string]interface{})
-	if !ok {
-		if entity, ok := data["entity"].(map[string]interface{}); ok {
-			subscriptionEntity = entity
-		} else {
-			log.Printf("[webhook] subscription.charged: missing subscription entity")
-			return
+	var subscriptionEntity map[string]interface{}
+	if subWrapper, ok := data["subscription"].(map[string]interface{}); ok {
+		if ent, ok := subWrapper["entity"].(map[string]interface{}); ok {
+			subscriptionEntity = ent
 		}
+	}
+	// Fallback if structure differs
+	if subscriptionEntity == nil {
+		if ent, ok := data["entity"].(map[string]interface{}); ok {
+			subscriptionEntity = ent
+		}
+	}
+
+	if subscriptionEntity == nil {
+		log.Printf("[webhook] subscription.charged: missing subscription entity")
+		return
 	}
 
 	razorpaySubID, ok := subscriptionEntity["id"].(string)
@@ -325,9 +333,11 @@ func (h *PaymentHandler) handleSubscriptionCharged(data map[string]interface{}) 
 
 	// Extract payment amount
 	var amount float64
-	if paymentEntity, ok := data["payment"].(map[string]interface{}); ok {
-		if amt, ok := paymentEntity["amount"].(float64); ok {
-			amount = amt / 100.0 // Razorpay sends amount in paise
+	if paymentWrapper, ok := data["payment"].(map[string]interface{}); ok {
+		if paymentEntity, ok := paymentWrapper["entity"].(map[string]interface{}); ok {
+			if amt, ok := paymentEntity["amount"].(float64); ok {
+				amount = amt / 100.0 // Razorpay sends amount in paise
+			}
 		}
 	}
 
