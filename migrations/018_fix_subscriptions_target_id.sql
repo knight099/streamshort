@@ -9,18 +9,30 @@ ALTER COLUMN target_id DROP NOT NULL;
 ALTER TABLE subscriptions
 DROP COLUMN IF EXISTS target_id;
 
--- 3) Ensure target_type constraint includes 'global'
-ALTER TABLE subscriptions
-DROP CONSTRAINT IF EXISTS subscriptions_target_type_check;
+-- 3) Drop all CHECK constraints on subscriptions table (to handle inline constraints)
+-- This ensures we remove both named and unnamed constraints
+DO $$ 
+DECLARE
+    r RECORD;
+BEGIN
+    -- Find and drop all CHECK constraints
+    FOR r IN (
+        SELECT conname 
+        FROM pg_constraint 
+        WHERE conrelid = 'subscriptions'::regclass 
+        AND contype = 'c'
+    ) LOOP
+        EXECUTE 'ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS ' || quote_ident(r.conname);
+    END LOOP;
+END $$;
 
+-- 4) Re-add constraints with correct values
+-- Target type constraint (includes 'global')
 ALTER TABLE subscriptions
 ADD CONSTRAINT subscriptions_target_type_check
 CHECK (target_type IN ('series', 'creator', 'global'));
 
--- 4) Ensure status constraint includes 'pending' and 'halted'
-ALTER TABLE subscriptions
-DROP CONSTRAINT IF EXISTS subscriptions_status_check;
-
+-- Status constraint (includes 'pending' and 'halted')
 ALTER TABLE subscriptions
 ADD CONSTRAINT subscriptions_status_check
 CHECK (status IN ('pending', 'active', 'cancelled', 'expired', 'halted'));
