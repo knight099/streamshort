@@ -65,61 +65,26 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Normalize inputs for all-access plans: allow missing or non-standard target
-	isAllAccessPlan := req.PlanID == "all_access_30d" || req.PlanID == "all_access_365d"
-	if isAllAccessPlan {
-		// For all-access, we don't gate on target. Treat as global subscription.
-		req.TargetType = "global"
-	}
+	// All subscriptions are global - set target_type to global
+	req.TargetType = "global"
 
 	// Validate required fields
 	if req.PlanID == "" {
 		http.Error(w, "Plan ID is required", http.StatusBadRequest)
 		return
 	}
-	// For our current plans (all-access), target is not required
-
-	// Validate target type
-	if req.TargetType != "" { // allow empty when all-access
-		if req.TargetType != "series" && req.TargetType != "creator" && req.TargetType != "global" {
-			http.Error(w, "Target type must be 'series', 'creator', or 'global'", http.StatusBadRequest)
-			return
-		}
-	}
 
 	// Check if user already has an active subscription
-	if isAllAccessPlan {
-		// Check for existing active all-access plans
-		var existingAllAccess models.Subscription
-		if err := h.db.Where("user_id = ? AND status = ? AND plan_id IN ?",
-			userID, "active", []string{"all_access_30d", "all_access_365d"}).
-			First(&existingAllAccess).Error; err == nil {
-
-			// If plan is different (e.g. upgrading from monthly to yearly), allow it
-			// The old subscription will be cancelled when the new one is activated (or immediately in this mock)
-			if existingAllAccess.PlanID == req.PlanID {
-				http.Error(w, "User already has an active subscription to this plan", http.StatusConflict)
-				return
-			}
-
-			// If plans are different, we'll proceed to create the new one.
-			// In a real Razorpay flow, you'd create a subscription and wait for webhook to swap them.
-			// Since we are mocking "auto-active" here, let's cancel the old one to avoid duplicates.
-			h.db.Model(&existingAllAccess).Update("status", "cancelled")
+	var existingSubscription models.Subscription
+	if err := h.db.Where("user_id = ? AND status = ? AND target_type = ?",
+		userID, "active", "global").First(&existingSubscription).Error; err == nil {
+		// If same plan, reject
+		if existingSubscription.PlanID == req.PlanID {
+			http.Error(w, "User already has an active subscription to this plan", http.StatusConflict)
+			return
 		}
-	} else {
-		var existingSubscription models.Subscription
-		if err := h.db.Where("user_id = ? AND target_type = ? AND status = ?",
-			userID, req.TargetType, "active").First(&existingSubscription).Error; err == nil {
-
-			// Similar logic for specific content subscriptions if needed
-			if existingSubscription.PlanID == req.PlanID {
-				http.Error(w, "User already has an active subscription to this content", http.StatusConflict)
-				return
-			}
-			// Cancel old one if upgrading plan
-			h.db.Model(&existingSubscription).Update("status", "cancelled")
-		}
+		// If different plan, cancel the old one (upgrade/downgrade)
+		h.db.Model(&existingSubscription).Update("status", "cancelled")
 	}
 
 	// Get plan details from subscription_plans table

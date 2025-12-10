@@ -255,7 +255,6 @@ func (h *SubscriptionHandler) CheckSubscriptionStatus(w http.ResponseWriter, r *
 	response := map[string]interface{}{
 		"has_access":           hasAccess,
 		"target_type":          "global",
-		"target_id":            nil,
 		"subscription_details": subscriptionDetails,
 	}
 
