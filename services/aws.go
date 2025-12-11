@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"streamshort/config"
@@ -16,17 +17,18 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/cloudfront/sign"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 // AWSService handles S3 and CloudFront operations
 type AWSService struct {
-	s3Client              *s3.Client
-	s3PresignClient       *s3.PresignClient
-	bucket                string
-	cloudFrontDomain      string
-	cloudFrontKeyPairID   string
-	cloudFrontPrivateKey  *rsa.PrivateKey
-	region                string
+	s3Client             *s3.Client
+	s3PresignClient      *s3.PresignClient
+	bucket               string
+	cloudFrontDomain     string
+	cloudFrontKeyPairID  string
+	cloudFrontPrivateKey *rsa.PrivateKey
+	region               string
 }
 
 // NewAWSService creates a new AWS service instance
@@ -188,3 +190,105 @@ func (s *AWSService) GetCloudFrontDomain() string {
 	return s.cloudFrontDomain
 }
 
+// ExtractS3Key extracts the S3 key from an s3:// URL or returns the path as-is
+func (s *AWSService) ExtractS3Key(s3Path string) string {
+	if strings.HasPrefix(s3Path, "s3://") {
+		// Remove s3:// scheme
+		withoutScheme := strings.TrimPrefix(s3Path, "s3://")
+		// Find the first slash to separate bucket from key
+		slashIndex := strings.Index(withoutScheme, "/")
+		if slashIndex != -1 && slashIndex+1 < len(withoutScheme) {
+			return withoutScheme[slashIndex+1:]
+		}
+		return ""
+	}
+	// If it's already a key path, return as-is
+	return s3Path
+}
+
+// DeleteS3Object deletes a single object from S3
+func (s *AWSService) DeleteS3Object(ctx context.Context, s3Path string) error {
+	if !s.IsConfigured() {
+		return fmt.Errorf("AWS service not configured")
+	}
+
+	key := s.ExtractS3Key(s3Path)
+	if key == "" {
+		return fmt.Errorf("invalid S3 path: %s", s3Path)
+	}
+
+	_, err := s.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to delete S3 object %s: %w", s3Path, err)
+	}
+
+	return nil
+}
+
+// DeleteS3ObjectsByPrefix deletes all objects with the given prefix from S3
+func (s *AWSService) DeleteS3ObjectsByPrefix(ctx context.Context, prefix string) error {
+	if !s.IsConfigured() {
+		return fmt.Errorf("AWS service not configured")
+	}
+
+	// Ensure prefix ends with / for folder-like deletion
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
+
+	// List all objects with the prefix
+	listInput := &s3.ListObjectsV2Input{
+		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(prefix),
+	}
+
+	var objectKeys []types.ObjectIdentifier
+
+	// Paginate through all objects
+	paginator := s3.NewListObjectsV2Paginator(s.s3Client, listInput)
+	for paginator.HasMorePages() {
+		output, err := paginator.NextPage(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list S3 objects with prefix %s: %w", prefix, err)
+		}
+
+		for _, obj := range output.Contents {
+			objectKeys = append(objectKeys, types.ObjectIdentifier{
+				Key: obj.Key,
+			})
+		}
+	}
+
+	// If no objects found, return early
+	if len(objectKeys) == 0 {
+		return nil
+	}
+
+	// Delete objects in batches (S3 allows up to 1000 objects per delete request)
+	const maxBatchSize = 1000
+	for i := 0; i < len(objectKeys); i += maxBatchSize {
+		end := i + maxBatchSize
+		if end > len(objectKeys) {
+			end = len(objectKeys)
+		}
+
+		batch := objectKeys[i:end]
+		_, err := s.s3Client.DeleteObjects(ctx, &s3.DeleteObjectsInput{
+			Bucket: aws.String(s.bucket),
+			Delete: &types.Delete{
+				Objects: batch,
+				Quiet:   aws.Bool(true),
+			},
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to delete S3 objects with prefix %s: %w", prefix, err)
+		}
+	}
+
+	return nil
+}

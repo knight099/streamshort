@@ -15,7 +15,7 @@ import (
 )
 
 type PaymentHandler struct {
-	db            *gorm.DB
+	db             *gorm.DB
 	razorpayClient *services.RazorpayClient
 }
 
@@ -344,11 +344,11 @@ func (h *PaymentHandler) handleSubscriptionCharged(data map[string]interface{}) 
 	// Update subscription status to active
 	h.db.Model(&subscription).Update("status", "active")
 
-	// Record Revenue for Monthly Payout Calculation
+	// Record Revenue for Monthly Payout Calculation (legacy table)
 	now := time.Now()
 	monthDate := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	platformFee := amount * 0.30
-	distributable := amount * 0.70
+	platformFee := amount * models.PlatformFeePercent
+	distributable := amount * models.CreatorSharePercent
 
 	rev := models.SubscriptionRevenue{
 		UserID:         subscription.UserID,
@@ -362,6 +362,18 @@ func (h *PaymentHandler) handleSubscriptionCharged(data map[string]interface{}) 
 	if err := h.db.Create(&rev).Error; err != nil {
 		log.Printf("[webhook] subscription.charged: failed to create revenue record: %v", err)
 	}
+
+	// Record creator earnings for the new payment system
+	// For global subscriptions, we need to distribute based on watch time (handled by payout calculation)
+	// For series-specific subscriptions, record earnings directly
+	if subscription.TargetType == "series" {
+		// Find series and creator
+		// Note: Currently subscriptions don't have a direct series_id field
+		// This would need to be added or we'd need to track via metadata
+		log.Printf("[webhook] subscription.charged: series-specific subscription earning recording not yet implemented")
+	}
+	// For global subscriptions, earnings are calculated monthly based on watch time
+	// via the CalculateMonthlyPayouts function in payout_calculation.go
 
 	log.Printf("[webhook] subscription.charged: activated subscription %s, recorded revenue %.2f", razorpaySubID, amount)
 }
@@ -385,7 +397,7 @@ func (h *PaymentHandler) handleSubscriptionActivated(data map[string]interface{}
 	h.db.Model(&models.Subscription{}).
 		Where("razorpay_subscription_id = ?", razorpaySubID).
 		Update("status", "active")
-	
+
 	log.Printf("[webhook] subscription.activated: activated subscription %s", razorpaySubID)
 }
 
@@ -436,7 +448,7 @@ func (h *PaymentHandler) handleSubscriptionCancelled(data map[string]interface{}
 	h.db.Model(&models.Subscription{}).
 		Where("razorpay_subscription_id = ?", razorpaySubID).
 		Update("status", "cancelled")
-	
+
 	log.Printf("[webhook] subscription.cancelled: cancelled subscription %s", razorpaySubID)
 }
 
@@ -460,7 +472,7 @@ func (h *PaymentHandler) handleSubscriptionHalted(data map[string]interface{}) {
 	h.db.Model(&models.Subscription{}).
 		Where("razorpay_subscription_id = ?", razorpaySubID).
 		Update("status", "cancelled") // Or create a "halted" status
-	
+
 	log.Printf("[webhook] subscription.halted: halted subscription %s", razorpaySubID)
 }
 
@@ -483,7 +495,7 @@ func (h *PaymentHandler) handleSubscriptionCompleted(data map[string]interface{}
 	h.db.Model(&models.Subscription{}).
 		Where("razorpay_subscription_id = ?", razorpaySubID).
 		Update("status", "expired")
-	
+
 	log.Printf("[webhook] subscription.completed: completed subscription %s", razorpaySubID)
 }
 

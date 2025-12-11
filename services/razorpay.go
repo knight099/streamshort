@@ -46,9 +46,9 @@ func (c *RazorpayClient) CreateSubscription(planID string, customerNotify int, t
 // CreatePaymentLink creates a payment link for a subscription
 func (c *RazorpayClient) CreatePaymentLink(subscriptionID string, amount float64, currency string, description string) (map[string]interface{}, error) {
 	payload := map[string]interface{}{
-		"amount":        amount * 100, // Razorpay expects amount in paise
-		"currency":     currency,
-		"description":   description,
+		"amount":          amount * 100, // Razorpay expects amount in paise
+		"currency":        currency,
+		"description":     description,
 		"subscription_id": subscriptionID,
 	}
 
@@ -108,3 +108,111 @@ func (c *RazorpayClient) makeRequest(method, endpoint string, payload map[string
 	return result, nil
 }
 
+// ================= RAZORPAY PAYOUTS API =================
+
+// CreateContact creates a contact in Razorpay for payouts
+func (c *RazorpayClient) CreateContact(name, referenceID string) (string, error) {
+	payload := map[string]interface{}{
+		"name":         name,
+		"type":         "vendor",
+		"reference_id": referenceID,
+	}
+
+	result, err := c.makeRequest("POST", "/contacts", payload)
+	if err != nil {
+		return "", err
+	}
+
+	contactID, ok := result["id"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid contact response: missing id")
+	}
+
+	return contactID, nil
+}
+
+// CreateBankFundAccount creates a bank account fund account for a contact
+func (c *RazorpayClient) CreateBankFundAccount(contactID, accountName, accountNumber, ifscCode string) (string, error) {
+	payload := map[string]interface{}{
+		"contact_id":   contactID,
+		"account_type": "bank_account",
+		"bank_account": map[string]interface{}{
+			"name":           accountName,
+			"ifsc":           ifscCode,
+			"account_number": accountNumber,
+		},
+	}
+
+	result, err := c.makeRequest("POST", "/fund_accounts", payload)
+	if err != nil {
+		return "", err
+	}
+
+	fundAccountID, ok := result["id"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid fund account response: missing id")
+	}
+
+	return fundAccountID, nil
+}
+
+// CreateUPIFundAccount creates a UPI fund account for a contact
+func (c *RazorpayClient) CreateUPIFundAccount(contactID, upiID string) (string, error) {
+	payload := map[string]interface{}{
+		"contact_id":   contactID,
+		"account_type": "vpa",
+		"vpa": map[string]interface{}{
+			"address": upiID,
+		},
+	}
+
+	result, err := c.makeRequest("POST", "/fund_accounts", payload)
+	if err != nil {
+		return "", err
+	}
+
+	fundAccountID, ok := result["id"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid fund account response: missing id")
+	}
+
+	return fundAccountID, nil
+}
+
+// CreatePayout creates a payout to a fund account
+func (c *RazorpayClient) CreatePayout(fundAccountID string, amount float64, currency, mode, narration string) (string, error) {
+	// Determine payout mode based on method
+	payoutMode := "NEFT"
+	if mode == "upi" {
+		payoutMode = "UPI"
+	} else if mode == "IMPS" || mode == "RTGS" || mode == "NEFT" {
+		payoutMode = mode
+	}
+
+	payload := map[string]interface{}{
+		"fund_account_id":      fundAccountID,
+		"amount":               int64(amount * 100), // Amount in paise
+		"currency":             currency,
+		"mode":                 payoutMode,
+		"purpose":              "payout",
+		"queue_if_low_balance": true,
+		"narration":            narration,
+	}
+
+	result, err := c.makeRequest("POST", "/payouts", payload)
+	if err != nil {
+		return "", err
+	}
+
+	payoutID, ok := result["id"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid payout response: missing id")
+	}
+
+	return payoutID, nil
+}
+
+// GetPayoutStatus gets the status of a payout
+func (c *RazorpayClient) GetPayoutStatus(payoutID string) (map[string]interface{}, error) {
+	return c.makeRequest("GET", "/payouts/"+payoutID, nil)
+}

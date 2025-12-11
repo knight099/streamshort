@@ -19,6 +19,7 @@ type Series struct {
 	PriceAmount  *float64       `json:"price_amount" gorm:"type:decimal(10,2)"`
 	ThumbnailURL *string        `json:"thumbnail_url"`
 	Status       string         `json:"status" gorm:"type:varchar(20);default:'draft';check:status IN ('draft', 'published')"`
+	ViewCount    int64          `json:"view_count" gorm:"default:0"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`

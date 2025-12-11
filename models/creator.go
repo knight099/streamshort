@@ -42,15 +42,20 @@ type CreatorFollow struct {
 func (CreatorFollow) TableName() string { return "creator_follows" }
 
 type PayoutDetails struct {
-	ID            string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	CreatorID     string         `json:"creator_id" gorm:"type:uuid;not null;uniqueIndex"`
-	BankName      string         `json:"bank_name"`
-	AccountNumber string         `json:"account_number"`
-	IFSCCode      string         `json:"ifsc_code"`
-	AccountHolder string         `json:"account_holder"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	DeletedAt     gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+	ID                    string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	CreatorID             string         `json:"creator_id" gorm:"type:uuid;not null;uniqueIndex"`
+	BankName              string         `json:"bank_name"`
+	AccountNumber         string         `json:"account_number"`
+	IFSCCode              string         `json:"ifsc_code"`
+	AccountHolder         string         `json:"account_holder"`
+	AccountType           string         `json:"account_type" gorm:"type:varchar(20);default:'savings'"`
+	UPIID                 *string        `json:"upi_id" gorm:"type:varchar(255)"`
+	Verified              bool           `json:"verified" gorm:"default:false"`
+	RazorpayContactID     *string        `json:"razorpay_contact_id" gorm:"type:varchar(255)"`
+	RazorpayFundAccountID *string        `json:"razorpay_fund_account_id" gorm:"type:varchar(255)"`
+	CreatedAt             time.Time      `json:"created_at"`
+	UpdatedAt             time.Time      `json:"updated_at"`
+	DeletedAt             gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 }
 
 type CreatorAnalytics struct {

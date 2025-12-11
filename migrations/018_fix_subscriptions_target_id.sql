@@ -2,8 +2,8 @@
 -- This migration fixes the issue where target_id column still exists with NOT NULL constraint
 
 -- 1) First, make target_id nullable (if it exists) to avoid constraint violations
-ALTER TABLE subscriptions
-ALTER COLUMN target_id DROP NOT NULL;
+-- ALTER TABLE subscriptions
+-- ALTER COLUMN target_id DROP NOT NULL;
 
 -- 2) Drop target_id column if it exists
 ALTER TABLE subscriptions

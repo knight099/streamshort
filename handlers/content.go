@@ -1293,6 +1293,42 @@ func (h *ContentHandler) DeleteEpisode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Delete S3 objects before deleting from database
+	ctx := r.Context()
+	if h.aws != nil && h.aws.IsConfigured() {
+		// Delete master video file if exists
+		if episode.S3MasterPath != nil && *episode.S3MasterPath != "" {
+			if err := h.aws.DeleteS3Object(ctx, *episode.S3MasterPath); err != nil {
+				// Log error but continue with deletion
+				fmt.Printf("Warning: Failed to delete S3 master file %s: %v\n", *episode.S3MasterPath, err)
+			}
+		}
+
+		// Delete transcoded folder (HLS segments, manifest, etc.)
+		transcodedPrefix := fmt.Sprintf("transcoded/%s", episodeID)
+		if err := h.aws.DeleteS3ObjectsByPrefix(ctx, transcodedPrefix); err != nil {
+			// Log error but continue with deletion
+			fmt.Printf("Warning: Failed to delete S3 transcoded folder %s: %v\n", transcodedPrefix, err)
+		}
+
+		// Delete thumbnail if exists
+		if episode.ThumbURL != nil && *episode.ThumbURL != "" {
+			if err := h.aws.DeleteS3Object(ctx, *episode.ThumbURL); err != nil {
+				// Log error but continue with deletion
+				fmt.Printf("Warning: Failed to delete S3 thumbnail %s: %v\n", *episode.ThumbURL, err)
+			}
+		}
+
+		// Delete captions if exists
+		if episode.CaptionsURL != nil && *episode.CaptionsURL != "" {
+			if err := h.aws.DeleteS3Object(ctx, *episode.CaptionsURL); err != nil {
+				// Log error but continue with deletion
+				fmt.Printf("Warning: Failed to delete S3 captions %s: %v\n", *episode.CaptionsURL, err)
+			}
+		}
+	}
+
+	// Delete from database (soft delete)
 	if err := h.db.Delete(&episode).Error; err != nil {
 		http.Error(w, "Failed to delete episode", http.StatusInternalServerError)
 		return

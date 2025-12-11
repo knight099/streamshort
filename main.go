@@ -74,13 +74,14 @@ func main() {
 	userHandler := handlers.NewUserHandler(svcs.DB)
 	analyticsHandler := handlers.NewAnalyticsHandler(svcs.DB, config.LoadConfig().CreatorRPMUSDPer1000Min)
 	adminHandler := handlers.NewAdminHandler()
+	creatorPaymentHandler := handlers.NewCreatorPaymentHandler(svcs.DB, razorpayClient)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware()
 
 	// Create router
 	r := mux.NewRouter()
-	
+
 	// Add Request Logger Middleware
 	r.Use(middleware.RequestLoggerMiddleware)
 
@@ -97,8 +98,9 @@ func main() {
 	r.HandleFunc("/content/series/{seriesId}/episodes", contentHandler.GetEpisodes).Methods("GET")
 	r.HandleFunc("/content/series/search", contentHandler.SearchSeries).Methods("GET")
 
-	// Public payment webhook (no authentication required)
+	// Public payment webhooks (no authentication required)
 	r.HandleFunc("/payments/webhook", paymentHandler.Webhook).Methods("POST")
+	r.HandleFunc("/payments/payout-webhook", creatorPaymentHandler.HandlePayoutWebhook).Methods("POST")
 
 	// Public analytics route
 	r.HandleFunc("/analytics/watch", analyticsHandler.RecordWatch).Methods("POST")
@@ -134,6 +136,16 @@ func main() {
 	protected.HandleFunc("/creators/{id}/follow", creatorHandler.UnfollowCreator).Methods("DELETE")
 	protected.HandleFunc("/creators/{id}/following", creatorHandler.IsFollowing).Methods("GET")
 	protected.HandleFunc("/me/following", creatorHandler.ListFollowing).Methods("GET")
+
+	// Creator payment/earnings routes
+	protected.HandleFunc("/creators/{creator_id}/earnings", creatorPaymentHandler.GetCreatorEarnings).Methods("GET")
+	protected.HandleFunc("/creators/{creator_id}/earnings/breakdown", creatorPaymentHandler.GetEarningsBreakdown).Methods("GET")
+	protected.HandleFunc("/creators/{creator_id}/payouts", creatorPaymentHandler.GetPayoutHistory).Methods("GET")
+	protected.HandleFunc("/creators/{creator_id}/payouts/request", creatorPaymentHandler.RequestPayout).Methods("POST")
+	protected.HandleFunc("/creators/{creator_id}/payout-details", creatorPaymentHandler.UpdatePayoutDetails).Methods("PUT")
+
+	// Series view tracking
+	protected.HandleFunc("/series/{series_id}/view", creatorPaymentHandler.TrackSeriesView).Methods("POST")
 
 	// Content routes (protected - creators only)
 	// Analytics (removed from here, moved to public)
@@ -235,6 +247,13 @@ func main() {
 	log.Println("  GET  /content/series/{seriesId}/episodes - Get episodes for series (public)")
 	log.Println("  GET  /content/series/search   - Search series (public)")
 	log.Println("  POST /payments/webhook          - Payment webhook (public)")
+	log.Println("  POST /payments/payout-webhook   - Payout webhook (public)")
+	log.Println("  GET  /api/creators/{id}/earnings         - Get creator earnings (requires auth)")
+	log.Println("  GET  /api/creators/{id}/earnings/breakdown - Earnings breakdown (requires auth)")
+	log.Println("  GET  /api/creators/{id}/payouts          - Get payout history (requires auth)")
+	log.Println("  POST /api/creators/{id}/payouts/request  - Request payout (requires auth)")
+	log.Println("  PUT  /api/creators/{id}/payout-details   - Update payout details (requires auth)")
+	log.Println("  POST /api/series/{id}/view               - Track series view (requires auth)")
 
 	// Bind to all interfaces (0.0.0.0) for deployment compatibility
 	addr := "0.0.0.0:" + port
