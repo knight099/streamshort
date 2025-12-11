@@ -25,9 +25,9 @@ CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_revoked_expires
 ON refresh_tokens(token, revoked, expires_at);
 
 -- Add foreign key constraint to users table
-ALTER TABLE refresh_tokens 
-ADD CONSTRAINT fk_refresh_tokens_user_id 
-FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+-- ALTER TABLE refresh_tokens 
+-- ADD CONSTRAINT fk_refresh_tokens_user_id 
+-- FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 -- Add comment to table
 COMMENT ON TABLE refresh_tokens IS 'Refresh tokens for JWT authentication';

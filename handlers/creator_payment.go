@@ -111,12 +111,13 @@ func (h *CreatorPaymentHandler) calculateEarningsSummary(creatorID string) (*mod
 		return nil, err
 	}
 
-	// Count active subscriptions for this creator's content
-	if err := h.db.Model(&models.Subscription{}).
-		Joins("JOIN series ON subscriptions.target_type = 'series'").
-		Where("series.creator_id = ? AND subscriptions.status = 'active'", creatorID).
+	// Count unique active subscribers who generated subscription earnings for this creator
+	// Since subscriptions are global (not series-specific), we count from earnings records
+	if err := h.db.Model(&models.CreatorEarnings{}).
+		Where("creator_id = ? AND earnings_type = 'subscription' AND status = 'pending'", creatorID).
+		Distinct("subscription_id").
 		Count(&subCount).Error; err != nil {
-		// Fallback: just count from earnings
+		// Fallback: set to 0
 		subCount = 0
 	}
 
@@ -683,10 +684,12 @@ func (h *CreatorPaymentHandler) GetEarningsBreakdown(w http.ResponseWriter, r *h
 
 	seriesBreakdown := make([]models.SeriesEarningsBreakdown, len(seriesStats))
 	for i, ss := range seriesStats {
-		// Count active subscriptions for this series
+		// Since subscriptions are global (not series-specific), we count unique subscribers
+		// who generated subscription earnings for this specific series
 		var activeSubCount int64
-		h.db.Model(&models.Subscription{}).
-			Where("target_type = 'series' AND status = 'active'").
+		h.db.Model(&models.CreatorEarnings{}).
+			Where("series_id = ? AND earnings_type = 'subscription' AND status = 'pending'", ss.SeriesID).
+			Distinct("subscription_id").
 			Count(&activeSubCount)
 
 		seriesBreakdown[i] = models.SeriesEarningsBreakdown{
