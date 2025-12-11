@@ -42,7 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
 INSERT INTO subscription_plans (id, name, description, duration, amount, currency, is_active)
 VALUES 
     ('plan_basic_monthly', 'Basic Monthly', 'Access to one series for 30 days', 30, 99.00, 'INR', true),
-    ('plan_premium_monthly', 'Premium Monthly', 'Access to all series from one creator for 30 days', 30, 299.00, 'INR', true),
-    ('plan_basic_yearly', 'Basic Yearly', 'Access to one series for 365 days', 365, 999.00, 'INR', true),
+    -- ('plan_premium_monthly', 'Premium Monthly', 'Access to all series from one creator for 30 days', 30, 299.00, 'INR', true),
+    -- ('plan_basic_yearly', 'Basic Yearly', 'Access to one series for 365 days', 365, 999.00, 'INR', true),
     ('plan_premium_yearly', 'Premium Yearly', 'Access to all series from one creator for 365 days', 365, 2999.00, 'INR', true)
 ON CONFLICT (id) DO NOTHING;
