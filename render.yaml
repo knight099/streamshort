@@ -1,0 +1,13 @@
+# Render deployment configuration
+services:
+  - type: web
+    name: streamshort-api
+    runtime: go
+    buildCommand: go build -o server .
+    startCommand: ./server
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SKIP_MIGRATIONS
+        value: "false"
+    healthCheckPath: /health
