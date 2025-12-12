@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"streamshort/models"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -20,7 +21,8 @@ func NewSocialHandler(db *gorm.DB) *SocialHandler {
 
 // Request/Response structs matching OpenAPI schema
 type LikeRequest struct {
-	Action string `json:"action"` // "like" or "unlike"
+	Action string `json:"action"` // "like" or "unlike" (legacy format)
+	Like   *bool  `json:"like"`   // true = like, false = unlike (new format)
 }
 
 type LikeResponse struct {
@@ -75,27 +77,53 @@ func (h *SocialHandler) LikeEpisode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate action
-	if req.Action != "like" && req.Action != "unlike" {
-		http.Error(w, "Action must be 'like' or 'unlike'", http.StatusBadRequest)
+	// Normalize the action: accept both "action" string and "like" boolean
+	var isLikeAction bool
+	if req.Like != nil {
+		// New format: {"like": true/false}
+		isLikeAction = *req.Like
+	} else if req.Action == "like" {
+		isLikeAction = true
+	} else if req.Action == "unlike" {
+		isLikeAction = false
+	} else {
+		http.Error(w, "Action must be 'like' or 'unlike', or provide 'like': true/false", http.StatusBadRequest)
 		return
 	}
 
-	// Mock like handling (in real implementation, save to database)
-	var likeCount int64 = 42 // Mock count
-	isLiked := req.Action == "like"
-
-	// In real implementation, you'd save this to database with userID and episodeID
-	_ = userID    // Use userID to avoid linter warning
-	_ = episodeID // Use episodeID to avoid linter warning
-
-	if req.Action == "like" {
-		likeCount++
+	// Handle like/unlike in database
+	if isLikeAction {
+		// Check if already liked
+		var existingLike models.EpisodeLike
+		err := h.db.Where("user_id = ? AND episode_id = ?", userID, episodeID).First(&existingLike).Error
+		if err == gorm.ErrRecordNotFound {
+			// Create new like
+			like := models.EpisodeLike{
+				UserID:    userID,
+				EpisodeID: episodeID,
+			}
+			if err := h.db.Create(&like).Error; err != nil {
+				http.Error(w, "Failed to like episode", http.StatusInternalServerError)
+				return
+			}
+		}
+		// If already exists, do nothing (idempotent)
 	} else {
-		if likeCount > 0 {
-			likeCount--
+		// Unlike: delete the like record
+		if err := h.db.Where("user_id = ? AND episode_id = ?", userID, episodeID).Delete(&models.EpisodeLike{}).Error; err != nil {
+			http.Error(w, "Failed to unlike episode", http.StatusInternalServerError)
+			return
 		}
 	}
+
+	// Get updated like count
+	var likeCount int64
+	h.db.Model(&models.EpisodeLike{}).Where("episode_id = ?", episodeID).Count(&likeCount)
+
+	// Check if user has liked
+	var userLikeCount int64
+	h.db.Model(&models.EpisodeLike{}).Where("user_id = ? AND episode_id = ?", userID, episodeID).Count(&userLikeCount)
+	isLiked := userLikeCount > 0
 
 	response := LikeResponse{
 		Status:    "success",
