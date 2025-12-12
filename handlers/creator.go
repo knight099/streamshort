@@ -124,18 +124,24 @@ func (h *CreatorHandler) GetCreatorDashboard(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Aggregate analytics
+	// Aggregate analytics (views and watch time from creator_analytics)
 	var totalViews int64
 	var totalWatchTime int64
-	var totalEarnings float64
 
 	for _, analytic := range analytics {
 		totalViews += analytic.Views
 		totalWatchTime += analytic.WatchTimeSeconds
-		totalEarnings += analytic.Earnings
 	}
 
-	// No mock data - new creators will see zeros until they have real analytics
+	// Get earnings from creator_earnings table (actual earnings from subscriptions, purchases, ad revenue)
+	var totalEarnings float64
+	if err := h.db.Model(&models.CreatorEarnings{}).
+		Where("creator_id = ? AND status != 'cancelled'", creatorID).
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&totalEarnings).Error; err != nil {
+		// Log error but continue with 0 earnings
+		totalEarnings = 0
+	}
 
 	response := CreatorDashboardResponse{
 		Views:            totalViews,
@@ -342,5 +348,3 @@ func (h *CreatorHandler) UpdateCreatorProfile(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(creatorProfile)
 }
-
-

@@ -36,14 +36,14 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("user_id").(string)
 	if !ok {
 		// Fallback for public testing or strict enforcement?
-		// For now, let's enforce it. If your Flutter app doesn't send token for this endpoint yet, 
+		// For now, let's enforce it. If your Flutter app doesn't send token for this endpoint yet,
 		// you might need to relax this or ensure token is sent.
 		// http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		// return
-		
+
 		// TEMP: Allow anonymous for backward compatibility if needed, but payouts won't work correctly without UserID.
 		// For proper Payouts, we NEED userID.
-		userID = "anonymous" 
+		userID = "anonymous"
 	}
 
 	var req WatchEventRequest
@@ -67,14 +67,15 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Update Aggregate Creator Stats (Views & Total Watch Time) - Keep this for real-time dashboard
 	// Note: We are NO LONGER calculating earnings here.
+	// Use ON CONFLICT (creator_id, date) to create one row per creator per day for proper 30-day analytics
 	if err := h.db.Exec(`
         INSERT INTO creator_analytics (id, creator_id, date, views, watch_time_seconds, earnings, created_at, updated_at)
         VALUES (gen_random_uuid(), ?, CURRENT_DATE, 1, ?, 0, NOW(), NOW())
-        ON CONFLICT (creator_id)
+        ON CONFLICT (creator_id, date)
         DO UPDATE SET
           views = creator_analytics.views + 1,
           watch_time_seconds = creator_analytics.watch_time_seconds + EXCLUDED.watch_time_seconds,
-          updated_at = NOW()`, out.CreatorID, req.WatchedSeconds, req.WatchedSeconds).Error; err != nil {
+          updated_at = NOW()`, out.CreatorID, req.WatchedSeconds).Error; err != nil {
 		http.Error(w, "Failed to update analytics", http.StatusInternalServerError)
 		return
 	}

@@ -107,6 +107,10 @@ func InitDB() *gorm.DB {
 			// Subscription models
 			&models.Subscription{},
 			&models.SubscriptionPlan{},
+			// Payment/earnings models
+			&models.CreatorEarnings{},
+			&models.Payout{},
+			&models.SeriesView{},
 		}
 
 		for _, model := range modelsToMigrate {
