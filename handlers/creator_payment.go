@@ -812,21 +812,36 @@ func (h *CreatorPaymentHandler) TrackSeriesView(w http.ResponseWriter, r *http.R
 	}
 	userAgent := r.Header.Get("User-Agent")
 
-	// Create view record
-	view := models.SeriesView{
-		SeriesID:  seriesID,
-		UserID:    userID,
-		IPAddress: &ipAddress,
-		UserAgent: &userAgent,
-		CreatedAt: time.Now(),
+	// Use upsert pattern: increment view_count if (series_id, user_id) exists, otherwise create new row
+	if userID != nil {
+		// For authenticated users: upsert by (series_id, user_id)
+		if err := h.db.Exec(`
+			INSERT INTO series_views (id, series_id, user_id, view_count, ip_address, user_agent, created_at, updated_at)
+			VALUES (gen_random_uuid(), ?, ?, 1, ?, ?, NOW(), NOW())
+			ON CONFLICT (series_id, user_id) WHERE user_id IS NOT NULL
+			DO UPDATE SET
+				view_count = series_views.view_count + 1,
+				ip_address = EXCLUDED.ip_address,
+				user_agent = EXCLUDED.user_agent,
+				updated_at = NOW()
+		`, seriesID, *userID, ipAddress, userAgent).Error; err != nil {
+			log.Printf("Warning: Failed to upsert series view record: %v", err)
+		}
+	} else {
+		// For anonymous users: create individual records (can't aggregate by NULL user_id)
+		view := models.SeriesView{
+			SeriesID:  seriesID,
+			UserID:    nil,
+			ViewCount: 1,
+			IPAddress: &ipAddress,
+			UserAgent: &userAgent,
+		}
+		if err := h.db.Create(&view).Error; err != nil {
+			log.Printf("Warning: Failed to create anonymous series view record: %v", err)
+		}
 	}
 
-	if err := h.db.Create(&view).Error; err != nil {
-		log.Printf("Warning: Failed to create series view record: %v", err)
-		// Continue anyway to update view count
-	}
-
-	// Increment view count
+	// Increment view count on series table
 	if err := h.db.Model(&series).Update("view_count", gorm.Expr("view_count + 1")).Error; err != nil {
 		log.Printf("Warning: Failed to increment view count: %v", err)
 	}

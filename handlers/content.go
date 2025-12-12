@@ -405,6 +405,8 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		Episodes      []EpisodeBrief `json:"episodes"`
 		FollowerCount int64          `json:"follower_count"`
 		Following     bool           `json:"following"`
+		ViewCount     int64          `json:"view_count"`
+		LikeCount     int64          `json:"like_count"`
 	}
 
 	var creatorName *string
@@ -439,6 +441,15 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		following = c > 0
 	}
 
+	// Get total like count for all episodes in this series
+	var likeCount int64
+	if err := h.db.Model(&models.EpisodeLike{}).
+		Joins("JOIN episodes ON episodes.id = episode_likes.episode_id").
+		Where("episodes.series_id = ?", series.ID).
+		Count(&likeCount).Error; err != nil {
+		likeCount = 0
+	}
+
 	resp := SeriesDetailResponse{
 		ID:            series.ID,
 		CreatorID:     series.CreatorID,
@@ -456,6 +467,8 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		Episodes:      eps,
 		FollowerCount: followerCount,
 		Following:     following,
+		ViewCount:     series.ViewCount,
+		LikeCount:     likeCount,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

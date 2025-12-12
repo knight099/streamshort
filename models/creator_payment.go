@@ -52,15 +52,17 @@ type Payout struct {
 	Earnings []CreatorEarnings `json:"earnings,omitempty" gorm:"foreignKey:PayoutID"`
 }
 
-// SeriesView represents a single view of a series
+// SeriesView represents aggregated view stats for a series per user
 type SeriesView struct {
 	ID        string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	SeriesID  string    `json:"series_id" gorm:"type:uuid;not null;index"`
 	UserID    *string   `json:"user_id" gorm:"type:uuid;index"`
+	ViewCount int64     `json:"view_count" gorm:"default:1"`
 	SessionID *string   `json:"session_id" gorm:"type:varchar(255)"`
 	IPAddress *string   `json:"ip_address" gorm:"type:varchar(45)"`
 	UserAgent *string   `json:"user_agent" gorm:"type:text"`
 	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// Relationships
 	Series *Series `json:"series,omitempty" gorm:"foreignKey:SeriesID"`
