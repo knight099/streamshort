@@ -102,8 +102,7 @@ func InitDB() *gorm.DB {
 			&models.UploadRequest{},
 			// Engagement models
 			&models.EpisodeLike{},
-			&models.EpisodeRating{},
-			&models.EpisodeComment{},
+			&models.SeriesRating{},
 			// Subscription models
 			&models.Subscription{},
 			&models.SubscriptionPlan{},

@@ -16,24 +16,17 @@ type EpisodeLike struct {
 	DeletedAt gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 }
 
-// EpisodeRating represents a user's rating for an episode
-type EpisodeRating struct {
+// SeriesRating represents a user's rating for a series (1-5 stars)
+type SeriesRating struct {
 	ID        string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	EpisodeID string         `json:"episode_id" gorm:"type:uuid;not null;index:idx_episode_rating_episode_user,unique"`
-	UserID    string         `json:"user_id" gorm:"type:uuid;not null;index:idx_episode_rating_episode_user,unique"`
-	Score     int            `json:"score" gorm:"not null"`
+	SeriesID  string         `json:"series_id" gorm:"type:uuid;not null;index:idx_series_rating_series_user,unique"`
+	UserID    string         `json:"user_id" gorm:"type:uuid;not null;index:idx_series_rating_series_user,unique"`
+	Score     int            `json:"score" gorm:"not null;check:score >= 1 AND score <= 5"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 }
 
-// EpisodeComment represents a comment made by a user on an episode
-type EpisodeComment struct {
-	ID        string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	EpisodeID string         `json:"episode_id" gorm:"type:uuid;not null;index"`
-	UserID    string         `json:"user_id" gorm:"type:uuid;not null;index"`
-	Text      string         `json:"text" gorm:"type:text;not null"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+func (SeriesRating) TableName() string {
+	return "series_ratings"
 }

@@ -175,8 +175,7 @@ func main() {
 
 	// Social/Engagement routes (protected)
 	protected.HandleFunc("/episodes/{id}/like", socialHandler.LikeEpisode).Methods("POST")
-	protected.HandleFunc("/episodes/{id}/rating", socialHandler.RateEpisode).Methods("POST")
-	protected.HandleFunc("/episodes/{id}/comments", socialHandler.CommentEpisode).Methods("POST")
+	protected.HandleFunc("/series/{id}/rating", socialHandler.RateSeries).Methods("POST")
 
 	// Admin routes (protected - admin only)
 	protected.HandleFunc("/admin/uploads/pending", adminHandler.GetPendingUploads).Methods("GET")

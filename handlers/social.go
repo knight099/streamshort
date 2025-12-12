@@ -3,9 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"streamshort/models"
-	"time"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
@@ -40,18 +38,6 @@ type RatingResponse struct {
 	Rating        int     `json:"rating"`
 	AverageRating float64 `json:"average_rating"`
 	TotalRatings  int64   `json:"total_ratings"`
-}
-
-type CommentRequest struct {
-	Content string `json:"content"`
-}
-
-type CommentResponse struct {
-	ID        string    `json:"id"`
-	Content   string    `json:"content"`
-	UserID    string    `json:"user_id"`
-	EpisodeID string    `json:"episode_id"`
-	CreatedAt time.Time `json:"created_at"`
 }
 
 // LikeEpisode handles episode likes/unlikes
@@ -136,8 +122,8 @@ func (h *SocialHandler) LikeEpisode(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// RateEpisode handles episode ratings
-func (h *SocialHandler) RateEpisode(w http.ResponseWriter, r *http.Request) {
+// RateSeries handles series ratings (1-5 stars)
+func (h *SocialHandler) RateSeries(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
 	userID, ok := r.Context().Value("user_id").(string)
 	if !ok {
@@ -145,11 +131,11 @@ func (h *SocialHandler) RateEpisode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get episode ID from URL
+	// Get series ID from URL
 	vars := mux.Vars(r)
-	episodeID := vars["id"]
-	if episodeID == "" {
-		http.Error(w, "Episode ID is required", http.StatusBadRequest)
+	seriesID := vars["id"]
+	if seriesID == "" {
+		http.Error(w, "Series ID is required", http.StatusBadRequest)
 		return
 	}
 
@@ -165,68 +151,49 @@ func (h *SocialHandler) RateEpisode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Mock rating handling (in real implementation, save to database)
-	_ = userID    // Use userID to avoid linter warning
-	_ = episodeID // Use episodeID to avoid linter warning
+	// Upsert rating: update if exists, create if not
+	var existingRating models.SeriesRating
+	err := h.db.Where("user_id = ? AND series_id = ?", userID, seriesID).First(&existingRating).Error
+	if err == gorm.ErrRecordNotFound {
+		// Create new rating
+		rating := models.SeriesRating{
+			UserID:   userID,
+			SeriesID: seriesID,
+			Score:    req.Rating,
+		}
+		if err := h.db.Create(&rating).Error; err != nil {
+			http.Error(w, "Failed to create rating", http.StatusInternalServerError)
+			return
+		}
+	} else if err == nil {
+		// Update existing rating
+		if err := h.db.Model(&existingRating).Update("score", req.Rating).Error; err != nil {
+			http.Error(w, "Failed to update rating", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
 
-	// Mock average rating calculation
-	averageRating := 4.2
-	totalRatings := int64(156)
+	// Calculate average rating for this series
+	var avgResult struct {
+		AvgScore float64
+		Count    int64
+	}
+	h.db.Model(&models.SeriesRating{}).
+		Where("series_id = ?", seriesID).
+		Select("AVG(score) as avg_score, COUNT(*) as count").
+		Scan(&avgResult)
 
 	response := RatingResponse{
 		Status:        "success",
 		Rating:        req.Rating,
-		AverageRating: averageRating,
-		TotalRatings:  totalRatings,
+		AverageRating: avgResult.AvgScore,
+		TotalRatings:  avgResult.Count,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-// CommentEpisode handles episode comments
-func (h *SocialHandler) CommentEpisode(w http.ResponseWriter, r *http.Request) {
-	// Get user ID from context (set by auth middleware)
-	userID, ok := r.Context().Value("user_id").(string)
-	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
-		return
-	}
-
-	// Get episode ID from URL
-	vars := mux.Vars(r)
-	episodeID := vars["id"]
-	if episodeID == "" {
-		http.Error(w, "Episode ID is required", http.StatusBadRequest)
-		return
-	}
-
-	var req CommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Validate content
-	if req.Content == "" {
-		http.Error(w, "Comment content is required", http.StatusBadRequest)
-		return
-	}
-
-	// Mock comment creation (in real implementation, save to database)
-	commentID := "comment_" + strconv.FormatInt(time.Now().Unix(), 10)
-	now := time.Now()
-
-	response := CommentResponse{
-		ID:        commentID,
-		Content:   req.Content,
-		UserID:    userID,
-		EpisodeID: episodeID,
-		CreatedAt: now,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(response)
 }
