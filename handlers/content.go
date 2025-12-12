@@ -450,6 +450,16 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		likeCount = 0
 	}
 
+	// Get total view count from series_views table (sum of all view_count values)
+	var viewCount int64
+	if err := h.db.Model(&models.SeriesView{}).
+		Where("series_id = ?", series.ID).
+		Select("COALESCE(SUM(view_count), 0)").
+		Scan(&viewCount).Error; err != nil {
+		// Fallback to series.ViewCount if query fails
+		viewCount = series.ViewCount
+	}
+
 	resp := SeriesDetailResponse{
 		ID:            series.ID,
 		CreatorID:     series.CreatorID,
@@ -467,7 +477,7 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		Episodes:      eps,
 		FollowerCount: followerCount,
 		Following:     following,
-		ViewCount:     series.ViewCount,
+		ViewCount:     viewCount,
 		LikeCount:     likeCount,
 	}
 
