@@ -86,6 +86,8 @@ type EpisodeBrief struct {
 	ThumbURL        *string    `json:"thumb_url"`
 	PublishedAt     *time.Time `json:"published_at"`
 	CreatedAt       time.Time  `json:"created_at"`
+	ViewCount       int64      `json:"view_count"`
+	LikeCount       int64      `json:"like_count"`
 }
 
 type SeriesListResponse struct {
@@ -260,6 +262,8 @@ func (h *ContentHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 				ThumbURL:        ep.ThumbURL,
 				PublishedAt:     ep.PublishedAt,
 				CreatedAt:       ep.CreatedAt,
+				ViewCount:       ep.ViewCount,
+				LikeCount:       ep.LikeCount,
 			})
 		}
 
@@ -424,6 +428,8 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 			ThumbURL:        ep.ThumbURL,
 			PublishedAt:     ep.PublishedAt,
 			CreatedAt:       ep.CreatedAt,
+			ViewCount:       ep.ViewCount,
+			LikeCount:       ep.LikeCount,
 		})
 	}
 
