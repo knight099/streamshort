@@ -57,6 +57,15 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify user exists in database (foreign key will fail otherwise)
+	var userExists bool
+	h.db.Raw(`SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)`, userID).Scan(&userExists)
+	if !userExists {
+		log.Printf("User %s not found in database - may need to complete profile first", userID)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
 	// Resolve creator and episode duration via episode -> series
 	type episodeInfo struct {
 		CreatorID       string
