@@ -71,23 +71,26 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user already has a watch record for this episode
-	// Try to insert; if conflict (already exists), do nothing
-	result := h.db.Exec(`
+	// Upsert: insert on first watch, update watched_seconds on subsequent watches
+	// RETURNING is_new tells us if this was an insert (first watch) or update
+	var isNewWatch bool
+	err := h.db.Raw(`
 		INSERT INTO user_episode_watches (id, user_id, episode_id, watched_seconds, first_watched_at)
 		VALUES (gen_random_uuid(), ?, ?, ?, NOW())
 		ON CONFLICT (user_id, episode_id)
-		DO NOTHING
-	`, userID, req.EpisodeID, req.WatchedSeconds)
+		DO UPDATE SET
+			watched_seconds = EXCLUDED.watched_seconds
+		RETURNING (xmax = 0) AS is_new
+	`, userID, req.EpisodeID, req.WatchedSeconds).Scan(&isNewWatch).Error
 
-	if result.Error != nil {
+	if err != nil {
 		http.Error(w, "Failed to track watch", http.StatusInternalServerError)
 		return
 	}
 
-	firstWatch := result.RowsAffected > 0
+	firstWatch := isNewWatch
 
-	// Only update analytics if this is a first-time watch
+	// Only update view_count and analytics if this is a first-time watch
 	if firstWatch {
 		// Increment episode view_count
 		h.db.Exec(`UPDATE episodes SET view_count = view_count + 1 WHERE id = ?`, req.EpisodeID)
