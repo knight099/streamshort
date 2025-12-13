@@ -223,7 +223,7 @@ func (h *ContentHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 	// Build query
 	query := h.db.Model(&models.Series{}).Where("status = ?", "published").
 		Preload("Creator").
-		Preload("Episodes", "status = ?", "published")
+		Preload("Episodes", "status = ? ORDER BY episode_number", "published")
 
 	if language != "" {
 		query = query.Where("language = ?", language)
@@ -383,7 +383,7 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	seriesID := vars["id"]
 
 	var series models.Series
-	if err := h.db.Preload("Creator").Preload("Episodes", "status = ?", "published").Where("id = ?", seriesID).First(&series).Error; err != nil {
+	if err := h.db.Preload("Creator").Preload("Episodes", "status = ? ORDER BY episode_number", "published").Where("id = ?", seriesID).First(&series).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			http.Error(w, "Series not found", http.StatusNotFound)
 			return
