@@ -70,7 +70,8 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Upsert: insert on first watch, update watched_seconds on subsequent watches
+	// Upsert: insert on first watch, ACCUMULATE watched_seconds on subsequent watches
+	// Frontend sends incremental watch time (e.g., 10s each heartbeat)
 	// RETURNING is_new tells us if this was an insert (first watch) or update
 	var isNewWatch bool
 	err := h.db.Raw(`
@@ -78,7 +79,7 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 		VALUES (gen_random_uuid(), ?, ?, ?, NOW())
 		ON CONFLICT (user_id, episode_id)
 		DO UPDATE SET
-			watched_seconds = EXCLUDED.watched_seconds
+			watched_seconds = user_episode_watches.watched_seconds + EXCLUDED.watched_seconds
 		RETURNING (xmax = 0) AS is_new
 	`, userID, req.EpisodeID, req.WatchedSeconds).Scan(&isNewWatch).Error
 
