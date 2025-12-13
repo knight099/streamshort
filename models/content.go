@@ -41,6 +41,7 @@ type Episode struct {
 	ThumbURL        *string        `json:"thumb_url"`
 	CaptionsURL     *string        `json:"captions_url"`
 	Status          string         `json:"status" gorm:"type:varchar(30);default:'pending_upload';check:status IN ('pending_upload', 'queued_transcode', 'ready', 'published')"`
+	ViewCount       int64          `json:"view_count" gorm:"default:0"`
 	PublishedAt     *time.Time     `json:"published_at"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`

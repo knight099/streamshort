@@ -89,6 +89,9 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 
 	// Only update analytics if this is a first-time watch
 	if firstWatch {
+		// Increment episode view_count
+		h.db.Exec(`UPDATE episodes SET view_count = view_count + 1 WHERE id = ?`, req.EpisodeID)
+
 		// Update Aggregate Creator Stats (Views & Total Watch Time)
 		if err := h.db.Exec(`
 			INSERT INTO creator_analytics (id, creator_id, date, views, watch_time_seconds, earnings, created_at, updated_at)

@@ -81,3 +81,69 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
 }
+
+// WatchHistoryItem represents a single item in the user's watch history
+type WatchHistoryItem struct {
+	EpisodeID      string  `json:"episode_id"`
+	EpisodeTitle   string  `json:"episode_title"`
+	EpisodeNumber  int     `json:"episode_number"`
+	SeriesID       string  `json:"series_id"`
+	SeriesTitle    string  `json:"series_title"`
+	ThumbnailURL   *string `json:"thumbnail_url"`
+	WatchedSeconds int     `json:"watched_seconds"`
+	FirstWatchedAt string  `json:"first_watched_at"`
+}
+
+// WatchHistoryResponse is the response for the watch history endpoint
+type WatchHistoryResponse struct {
+	Items []WatchHistoryItem `json:"items"`
+	Total int                `json:"total"`
+}
+
+// GetWatchHistory returns the authenticated user's episode watch history
+// GET /api/me/watch-history
+func (h *UserHandler) GetWatchHistory(w http.ResponseWriter, r *http.Request) {
+	userIDAny := r.Context().Value("user_id")
+	if userIDAny == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	userID, _ := userIDAny.(string)
+
+	// Query watch history with episode and series details
+	var items []WatchHistoryItem
+	err := h.db.Raw(`
+		SELECT 
+			uew.episode_id,
+			e.title as episode_title,
+			e.episode_number,
+			s.id as series_id,
+			s.title as series_title,
+			COALESCE(e.thumb_url, s.thumbnail_url) as thumbnail_url,
+			uew.watched_seconds,
+			uew.first_watched_at
+		FROM user_episode_watches uew
+		JOIN episodes e ON e.id = uew.episode_id
+		JOIN series s ON s.id = e.series_id
+		WHERE uew.user_id = ?
+		ORDER BY uew.first_watched_at DESC
+		LIMIT 100
+	`, userID).Scan(&items).Error
+
+	if err != nil {
+		http.Error(w, "Failed to fetch watch history", http.StatusInternalServerError)
+		return
+	}
+
+	if items == nil {
+		items = []WatchHistoryItem{}
+	}
+
+	resp := WatchHistoryResponse{
+		Items: items,
+		Total: len(items),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}
