@@ -92,19 +92,26 @@ func (h *SocialHandler) LikeEpisode(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Failed to like episode", http.StatusInternalServerError)
 				return
 			}
+			// Increment episode like_count
+			h.db.Exec("UPDATE episodes SET like_count = like_count + 1 WHERE id = ?", episodeID)
 		}
 		// If already exists, do nothing (idempotent)
 	} else {
 		// Unlike: delete the like record
-		if err := h.db.Where("user_id = ? AND episode_id = ?", userID, episodeID).Delete(&models.EpisodeLike{}).Error; err != nil {
+		result := h.db.Where("user_id = ? AND episode_id = ?", userID, episodeID).Delete(&models.EpisodeLike{})
+		if result.Error != nil {
 			http.Error(w, "Failed to unlike episode", http.StatusInternalServerError)
 			return
 		}
+		// Decrement episode like_count only if a row was actually deleted
+		if result.RowsAffected > 0 {
+			h.db.Exec("UPDATE episodes SET like_count = GREATEST(like_count - 1, 0) WHERE id = ?", episodeID)
+		}
 	}
 
-	// Get updated like count
-	var likeCount int64
-	h.db.Model(&models.EpisodeLike{}).Where("episode_id = ?", episodeID).Count(&likeCount)
+	// Get updated like count from episode table
+	var episode models.Episode
+	h.db.Select("like_count").Where("id = ?", episodeID).First(&episode)
 
 	// Check if user has liked
 	var userLikeCount int64
@@ -113,7 +120,7 @@ func (h *SocialHandler) LikeEpisode(w http.ResponseWriter, r *http.Request) {
 
 	response := LikeResponse{
 		Status:    "success",
-		LikeCount: likeCount,
+		LikeCount: episode.LikeCount,
 		IsLiked:   isLiked,
 	}
 
