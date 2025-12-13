@@ -27,6 +27,7 @@ type Series struct {
 	// Relationships
 	Creator  *CreatorProfile `json:"creator" gorm:"foreignKey:CreatorID"`
 	Episodes []Episode       `json:"episodes" gorm:"foreignKey:SeriesID;references:ID;constraint:OnDelete:CASCADE"`
+	Views    []SeriesView    `json:"-" gorm:"foreignKey:SeriesID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // Episode represents a single episode in a series
@@ -49,7 +50,9 @@ type Episode struct {
 	DeletedAt       gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relationships
-	Series Series `json:"series" gorm:"foreignKey:SeriesID;references:ID"`
+	Series  Series             `json:"series" gorm:"foreignKey:SeriesID;references:ID"`
+	Likes   []EpisodeLike      `json:"-" gorm:"foreignKey:EpisodeID;references:ID;constraint:OnDelete:CASCADE"`
+	Watches []UserEpisodeWatch `json:"-" gorm:"foreignKey:EpisodeID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 // UploadRequest represents a request for upload URL
