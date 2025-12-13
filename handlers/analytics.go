@@ -78,16 +78,32 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 	// CAP at episode duration to prevent gaming (can't earn more than video length)
 	// RETURNING is_new tells us if this was an insert (first watch) or update
 	var isNewWatch bool
-	err := h.db.Raw(`
-		INSERT INTO user_episode_watches (id, user_id, episode_id, watched_seconds, first_watched_at)
-		VALUES (gen_random_uuid(), ?, ?, LEAST(?, ?), NOW())
-		ON CONFLICT (user_id, episode_id)
-		DO UPDATE SET
-			watched_seconds = LEAST(user_episode_watches.watched_seconds + EXCLUDED.watched_seconds, ?)
-		RETURNING (xmax = 0) AS is_new
-	`, userID, req.EpisodeID, req.WatchedSeconds, info.DurationSeconds, info.DurationSeconds).Scan(&isNewWatch).Error
+	var err error
+
+	// If duration is 0 or unknown, don't cap (allow unlimited for now)
+	if info.DurationSeconds > 0 {
+		err = h.db.Raw(`
+			INSERT INTO user_episode_watches (id, user_id, episode_id, watched_seconds, first_watched_at)
+			VALUES (gen_random_uuid(), $1, $2, LEAST($3, $4), NOW())
+			ON CONFLICT (user_id, episode_id)
+			DO UPDATE SET
+				watched_seconds = LEAST(user_episode_watches.watched_seconds + EXCLUDED.watched_seconds, $4)
+			RETURNING (xmax = 0) AS is_new
+		`, userID, req.EpisodeID, req.WatchedSeconds, info.DurationSeconds).Scan(&isNewWatch).Error
+	} else {
+		// No duration cap - just accumulate
+		err = h.db.Raw(`
+			INSERT INTO user_episode_watches (id, user_id, episode_id, watched_seconds, first_watched_at)
+			VALUES (gen_random_uuid(), $1, $2, $3, NOW())
+			ON CONFLICT (user_id, episode_id)
+			DO UPDATE SET
+				watched_seconds = user_episode_watches.watched_seconds + EXCLUDED.watched_seconds
+			RETURNING (xmax = 0) AS is_new
+		`, userID, req.EpisodeID, req.WatchedSeconds).Scan(&isNewWatch).Error
+	}
 
 	if err != nil {
+		log.Printf("Failed to track watch for user %s, episode %s: %v", userID, req.EpisodeID, err)
 		http.Error(w, "Failed to track watch", http.StatusInternalServerError)
 		return
 	}
