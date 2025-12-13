@@ -17,16 +17,16 @@ type Config struct {
 	FirebaseAPIKey          string
 	FirebaseProjectID       string
 	RecaptchaSiteKey        string
-	CreatorRPMUSDPer1000Min float64
+	CreatorRPMINRPer1000Min float64
 
 	// AWS Configuration
-	AWSRegion                  string
-	AWSAccessKeyID             string
-	AWSSecretAccessKey         string
-	AWSS3Bucket                string
-	AWSCloudFrontDomain        string
+	AWSRegion                   string
+	AWSAccessKeyID              string
+	AWSSecretAccessKey          string
+	AWSS3Bucket                 string
+	AWSCloudFrontDomain         string
 	AWSCloudFrontDistributionID string
-	AWSCloudFrontKeyPairID     string
+	AWSCloudFrontKeyPairID      string
 	AWSCloudFrontPrivateKeyPath string
 	AWSCloudFrontPrivateKey     string
 
@@ -74,13 +74,13 @@ func LoadConfig() *Config {
 		RazorpayKeySecret: getEnv("RAZORPAY_KEY_SECRET", ""),
 	}
 
-	// Parse earnings RPM (USD per 1000 watch-minutes). Default 1.0
-	rpmStr := getEnv("CREATOR_RPM_USD_PER_1000_MIN", "1.0")
+	// Parse earnings RPM (INR per 1000 watch-minutes). Default 100.0 (₹100 per 1000 min)
+	rpmStr := getEnv("CREATOR_RPM_INR_PER_1000_MIN", "100.0")
 	if v, err := strconv.ParseFloat(rpmStr, 64); err == nil {
-		config.CreatorRPMUSDPer1000Min = v
+		config.CreatorRPMINRPer1000Min = v
 	} else {
-		log.Printf("Warning: invalid CREATOR_RPM_USD_PER_1000_MIN=%s, using default 1.0", rpmStr)
-		config.CreatorRPMUSDPer1000Min = 1.0
+		log.Printf("Warning: invalid CREATOR_RPM_INR_PER_1000_MIN=%s, using default 100.0", rpmStr)
+		config.CreatorRPMINRPer1000Min = 100.0
 	}
 
 	return config

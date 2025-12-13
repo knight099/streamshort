@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -10,12 +11,10 @@ import (
 
 type AnalyticsHandler struct {
 	db *gorm.DB
-	// rpm in USD per 1000 minutes
-	rpmUSDPer1000Min float64
 }
 
-func NewAnalyticsHandler(db *gorm.DB, rpmUSDPer1000Min float64) *AnalyticsHandler {
-	return &AnalyticsHandler{db: db, rpmUSDPer1000Min: rpmUSDPer1000Min}
+func NewAnalyticsHandler(db *gorm.DB) *AnalyticsHandler {
+	return &AnalyticsHandler{db: db}
 }
 
 type WatchEventRequest struct {
@@ -37,7 +36,7 @@ type WatchResponse struct {
 	Tracked    bool `json:"tracked"`
 }
 
-// POST /analytics/watch
+// POST /api/analytics/watch
 func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 	// Get User ID from context (Auth Middleware may or may not be present)
 	userID, ok := r.Context().Value("user_id").(string)
@@ -89,28 +88,25 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	firstWatch := isNewWatch
+	now := time.Now()
+	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
-	// Only update view_count and analytics if this is a first-time watch
+	// Only update view_count and monthly stats if this is a first-time watch
 	if firstWatch {
 		// Increment episode view_count
 		h.db.Exec(`UPDATE episodes SET view_count = view_count + 1 WHERE id = ?`, req.EpisodeID)
 
 		// Update Aggregate Creator Stats (Views & Total Watch Time)
-		if err := h.db.Exec(`
+		h.db.Exec(`
 			INSERT INTO creator_analytics (id, creator_id, date, views, watch_time_seconds, earnings, created_at, updated_at)
 			VALUES (gen_random_uuid(), ?, CURRENT_DATE, 1, ?, 0, NOW(), NOW())
 			ON CONFLICT (creator_id, date)
 			DO UPDATE SET
 			  views = creator_analytics.views + 1,
 			  watch_time_seconds = creator_analytics.watch_time_seconds + EXCLUDED.watch_time_seconds,
-			  updated_at = NOW()`, out.CreatorID, req.WatchedSeconds).Error; err != nil {
-			// Log but don't fail
-		}
+			  updated_at = NOW()`, out.CreatorID, req.WatchedSeconds)
 
 		// Update User-Specific Monthly Stats (For Payout Calculation)
-		now := time.Now()
-		firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-
 		h.db.Exec(`
 			INSERT INTO monthly_viewer_stats (id, user_id, creator_id, month_date, watch_time_seconds, created_at, updated_at)
 			VALUES (gen_random_uuid(), ?, ?, ?, ?, NOW(), NOW())
@@ -120,10 +116,80 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 			  updated_at = NOW()`, userID, out.CreatorID, firstOfMonth, req.WatchedSeconds)
 	}
 
+	// Calculate real-time earnings asynchronously using goroutine
+	// This runs concurrently and doesn't block the response
+	go h.calculateRealtimeEarnings(userID, out.CreatorID, firstOfMonth)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(WatchResponse{
 		Success:    true,
 		FirstWatch: firstWatch,
 		Tracked:    true,
 	})
+}
+
+// calculateRealtimeEarnings calculates and updates creator earnings based on
+// user's subscription revenue proportionally distributed by watch time.
+// This runs asynchronously in a goroutine.
+func (h *AnalyticsHandler) calculateRealtimeEarnings(userID, creatorID string, monthDate time.Time) {
+	// 1. Get user's distributable subscription revenue for this month
+	var distributable float64
+	err := h.db.Raw(`
+		SELECT COALESCE(SUM(distributable), 0)
+		FROM subscription_revenues
+		WHERE user_id = ? AND month_date = ?
+	`, userID, monthDate).Scan(&distributable).Error
+
+	if err != nil || distributable == 0 {
+		// User has no subscription for this month, no earnings to distribute
+		return
+	}
+
+	// 2. Get user's total watch time across ALL creators this month
+	var totalWatchTime int64
+	err = h.db.Raw(`
+		SELECT COALESCE(SUM(watch_time_seconds), 0)
+		FROM monthly_viewer_stats
+		WHERE user_id = ? AND month_date = ?
+	`, userID, monthDate).Scan(&totalWatchTime).Error
+
+	if err != nil || totalWatchTime == 0 {
+		return
+	}
+
+	// 3. Get user's watch time for THIS specific creator this month
+	var creatorWatchTime int64
+	err = h.db.Raw(`
+		SELECT COALESCE(watch_time_seconds, 0)
+		FROM monthly_viewer_stats
+		WHERE user_id = ? AND creator_id = ? AND month_date = ?
+	`, userID, creatorID, monthDate).Scan(&creatorWatchTime).Error
+
+	if err != nil || creatorWatchTime == 0 {
+		return
+	}
+
+	// 4. Calculate this creator's proportional share of the user's subscription
+	// Formula: (creator_watch_time / total_watch_time) * distributable_amount
+	shareFraction := float64(creatorWatchTime) / float64(totalWatchTime)
+	creatorEarnings := distributable * shareFraction
+
+	// 5. Update creator's estimated earnings in creator_analytics for today
+	if err := h.db.Exec(`
+		UPDATE creator_analytics 
+		SET earnings = ?, updated_at = NOW()
+		WHERE creator_id = ? AND date = CURRENT_DATE
+	`, creatorEarnings, creatorID).Error; err != nil {
+		log.Printf("Failed to update creator earnings: %v", err)
+	}
+
+	// 6. Upsert into creator_payouts for this month (running estimate)
+	h.db.Exec(`
+		INSERT INTO creator_payouts (id, creator_id, month_date, total_earnings, status, created_at, updated_at)
+		VALUES (gen_random_uuid(), ?, ?, ?, 'pending', NOW(), NOW())
+		ON CONFLICT (creator_id, month_date)
+		DO UPDATE SET
+			total_earnings = EXCLUDED.total_earnings,
+			updated_at = NOW()
+	`, creatorID, monthDate, creatorEarnings)
 }

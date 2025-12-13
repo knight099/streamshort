@@ -72,7 +72,7 @@ func main() {
 	subscriptionHandler := handlers.NewSubscriptionHandler(svcs.DB)
 	socialHandler := handlers.NewSocialHandler(svcs.DB)
 	userHandler := handlers.NewUserHandler(svcs.DB)
-	analyticsHandler := handlers.NewAnalyticsHandler(svcs.DB, config.LoadConfig().CreatorRPMUSDPer1000Min)
+	analyticsHandler := handlers.NewAnalyticsHandler(svcs.DB)
 	adminHandler := handlers.NewAdminHandler()
 	creatorPaymentHandler := handlers.NewCreatorPaymentHandler(svcs.DB, razorpayClient)
 
