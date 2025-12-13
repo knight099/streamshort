@@ -57,31 +57,35 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve creator via episode -> series
-	type row struct{ CreatorID string }
-	var out row
+	// Resolve creator and episode duration via episode -> series
+	type episodeInfo struct {
+		CreatorID       string
+		DurationSeconds int64
+	}
+	var info episodeInfo
 	if err := h.db.Raw(`
-        SELECT s.creator_id AS creator_id
+        SELECT s.creator_id AS creator_id, e.duration_seconds
         FROM episodes e
         JOIN series s ON s.id = e.series_id
         WHERE e.id = ?
-        LIMIT 1`, req.EpisodeID).Scan(&out).Error; err != nil || out.CreatorID == "" {
+        LIMIT 1`, req.EpisodeID).Scan(&info).Error; err != nil || info.CreatorID == "" {
 		http.Error(w, "Episode or creator not found", http.StatusNotFound)
 		return
 	}
 
 	// Upsert: insert on first watch, ACCUMULATE watched_seconds on subsequent watches
 	// Frontend sends incremental watch time (e.g., 10s each heartbeat)
+	// CAP at episode duration to prevent gaming (can't earn more than video length)
 	// RETURNING is_new tells us if this was an insert (first watch) or update
 	var isNewWatch bool
 	err := h.db.Raw(`
 		INSERT INTO user_episode_watches (id, user_id, episode_id, watched_seconds, first_watched_at)
-		VALUES (gen_random_uuid(), ?, ?, ?, NOW())
+		VALUES (gen_random_uuid(), ?, ?, LEAST(?, ?), NOW())
 		ON CONFLICT (user_id, episode_id)
 		DO UPDATE SET
-			watched_seconds = user_episode_watches.watched_seconds + EXCLUDED.watched_seconds
+			watched_seconds = LEAST(user_episode_watches.watched_seconds + EXCLUDED.watched_seconds, ?)
 		RETURNING (xmax = 0) AS is_new
-	`, userID, req.EpisodeID, req.WatchedSeconds).Scan(&isNewWatch).Error
+	`, userID, req.EpisodeID, req.WatchedSeconds, info.DurationSeconds, info.DurationSeconds).Scan(&isNewWatch).Error
 
 	if err != nil {
 		http.Error(w, "Failed to track watch", http.StatusInternalServerError)
@@ -105,7 +109,7 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 			DO UPDATE SET
 			  views = creator_analytics.views + 1,
 			  watch_time_seconds = creator_analytics.watch_time_seconds + EXCLUDED.watch_time_seconds,
-			  updated_at = NOW()`, out.CreatorID, req.WatchedSeconds)
+			  updated_at = NOW()`, info.CreatorID, req.WatchedSeconds)
 
 		// Update User-Specific Monthly Stats (For Payout Calculation)
 		h.db.Exec(`
@@ -114,12 +118,12 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 			ON CONFLICT (user_id, creator_id, month_date)
 			DO UPDATE SET
 			  watch_time_seconds = monthly_viewer_stats.watch_time_seconds + EXCLUDED.watch_time_seconds,
-			  updated_at = NOW()`, userID, out.CreatorID, firstOfMonth, req.WatchedSeconds)
+			  updated_at = NOW()`, userID, info.CreatorID, firstOfMonth, req.WatchedSeconds)
 	}
 
 	// Calculate real-time earnings asynchronously using goroutine
 	// This runs concurrently and doesn't block the response
-	go h.calculateRealtimeEarnings(userID, out.CreatorID, firstOfMonth)
+	go h.calculateRealtimeEarnings(userID, info.CreatorID, firstOfMonth)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(WatchResponse{
