@@ -40,6 +40,50 @@ type RatingResponse struct {
 	TotalRatings  int64   `json:"total_ratings"`
 }
 
+// GetLikeStatus returns the like status for an episode
+// GET /api/episodes/{id}/like
+func (h *SocialHandler) GetLikeStatus(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context (set by auth middleware)
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	// Get episode ID from URL
+	vars := mux.Vars(r)
+	episodeID := vars["id"]
+	if episodeID == "" {
+		http.Error(w, "Episode ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get like count from episode table
+	var episode models.Episode
+	if err := h.db.Select("like_count").Where("id = ?", episodeID).First(&episode).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Episode not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if user has liked
+	var userLikeCount int64
+	h.db.Model(&models.EpisodeLike{}).Where("user_id = ? AND episode_id = ?", userID, episodeID).Count(&userLikeCount)
+	isLiked := userLikeCount > 0
+
+	response := LikeResponse{
+		Status:    "success",
+		LikeCount: episode.LikeCount,
+		IsLiked:   isLiked,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // LikeEpisode handles episode likes/unlikes
 func (h *SocialHandler) LikeEpisode(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)

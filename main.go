@@ -175,6 +175,7 @@ func main() {
 	protected.HandleFunc("/subscriptions/{id}/renew", subscriptionHandler.RenewUserSubscription).Methods("POST")
 
 	// Social/Engagement routes (protected)
+	protected.HandleFunc("/episodes/{id}/like", socialHandler.GetLikeStatus).Methods("GET")
 	protected.HandleFunc("/episodes/{id}/like", socialHandler.LikeEpisode).Methods("POST")
 	protected.HandleFunc("/series/{id}/rating", socialHandler.RateSeries).Methods("POST")
 
