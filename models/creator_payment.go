@@ -81,6 +81,19 @@ func (SeriesView) TableName() string {
 	return "series_views"
 }
 
+// UserEpisodeWatch tracks first watch time per user per episode
+type UserEpisodeWatch struct {
+	ID             string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	UserID         string    `json:"user_id" gorm:"type:uuid;not null;index;uniqueIndex:uix_user_episode"`
+	EpisodeID      string    `json:"episode_id" gorm:"type:uuid;not null;index;uniqueIndex:uix_user_episode"`
+	WatchedSeconds int       `json:"watched_seconds" gorm:"default:0"`
+	FirstWatchedAt time.Time `json:"first_watched_at" gorm:"default:now()"`
+}
+
+func (UserEpisodeWatch) TableName() string {
+	return "user_episode_watches"
+}
+
 // Constants for platform fee and minimum payout threshold
 const (
 	PlatformFeePercent     = 0.30  // 30% platform fee

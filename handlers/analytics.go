@@ -30,20 +30,26 @@ type AnalyticsResponse struct {
 	CreatorProfile   map[string]interface{} `json:"creator_profile"`
 }
 
+// WatchResponse is the response for the watch tracking endpoint
+type WatchResponse struct {
+	Success    bool `json:"success"`
+	FirstWatch bool `json:"first_watch"`
+	Tracked    bool `json:"tracked"`
+}
+
 // POST /analytics/watch
 func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
-	// Get User ID from context (Auth Middleware required)
+	// Get User ID from context (Auth Middleware may or may not be present)
 	userID, ok := r.Context().Value("user_id").(string)
-	if !ok {
-		// Fallback for public testing or strict enforcement?
-		// For now, let's enforce it. If your Flutter app doesn't send token for this endpoint yet,
-		// you might need to relax this or ensure token is sent.
-		// http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		// return
-
-		// TEMP: Allow anonymous for backward compatibility if needed, but payouts won't work correctly without UserID.
-		// For proper Payouts, we NEED userID.
-		userID = "anonymous"
+	if !ok || userID == "" {
+		// Anonymous user - don't track for deduplication purposes
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(WatchResponse{
+			Success:    true,
+			FirstWatch: false,
+			Tracked:    false,
+		})
+		return
 	}
 
 	var req WatchEventRequest
@@ -65,58 +71,53 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Update Aggregate Creator Stats (Views & Total Watch Time) - Keep this for real-time dashboard
-	// Note: We are NO LONGER calculating earnings here.
-	// Use ON CONFLICT (creator_id, date) to create one row per creator per day for proper 30-day analytics
-	if err := h.db.Exec(`
-        INSERT INTO creator_analytics (id, creator_id, date, views, watch_time_seconds, earnings, created_at, updated_at)
-        VALUES (gen_random_uuid(), ?, CURRENT_DATE, 1, ?, 0, NOW(), NOW())
-        ON CONFLICT (creator_id, date)
-        DO UPDATE SET
-          views = creator_analytics.views + 1,
-          watch_time_seconds = creator_analytics.watch_time_seconds + EXCLUDED.watch_time_seconds,
-          updated_at = NOW()`, out.CreatorID, req.WatchedSeconds).Error; err != nil {
-		http.Error(w, "Failed to update analytics", http.StatusInternalServerError)
+	// Check if user already has a watch record for this episode
+	// Try to insert; if conflict (already exists), do nothing
+	result := h.db.Exec(`
+		INSERT INTO user_episode_watches (id, user_id, episode_id, watched_seconds, first_watched_at)
+		VALUES (gen_random_uuid(), ?, ?, ?, NOW())
+		ON CONFLICT (user_id, episode_id)
+		DO NOTHING
+	`, userID, req.EpisodeID, req.WatchedSeconds)
+
+	if result.Error != nil {
+		http.Error(w, "Failed to track watch", http.StatusInternalServerError)
 		return
 	}
 
-	// 2. Update User-Specific Monthly Stats (For Payout Calculation)
-	if userID != "anonymous" {
-		// Calculate the first day of the current month
+	firstWatch := result.RowsAffected > 0
+
+	// Only update analytics if this is a first-time watch
+	if firstWatch {
+		// Update Aggregate Creator Stats (Views & Total Watch Time)
+		if err := h.db.Exec(`
+			INSERT INTO creator_analytics (id, creator_id, date, views, watch_time_seconds, earnings, created_at, updated_at)
+			VALUES (gen_random_uuid(), ?, CURRENT_DATE, 1, ?, 0, NOW(), NOW())
+			ON CONFLICT (creator_id, date)
+			DO UPDATE SET
+			  views = creator_analytics.views + 1,
+			  watch_time_seconds = creator_analytics.watch_time_seconds + EXCLUDED.watch_time_seconds,
+			  updated_at = NOW()`, out.CreatorID, req.WatchedSeconds).Error; err != nil {
+			// Log but don't fail
+		}
+
+		// Update User-Specific Monthly Stats (For Payout Calculation)
 		now := time.Now()
 		firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
-		if err := h.db.Exec(`
+		h.db.Exec(`
 			INSERT INTO monthly_viewer_stats (id, user_id, creator_id, month_date, watch_time_seconds, created_at, updated_at)
 			VALUES (gen_random_uuid(), ?, ?, ?, ?, NOW(), NOW())
 			ON CONFLICT (user_id, creator_id, month_date)
 			DO UPDATE SET
 			  watch_time_seconds = monthly_viewer_stats.watch_time_seconds + EXCLUDED.watch_time_seconds,
-			  updated_at = NOW()`, userID, out.CreatorID, firstOfMonth, req.WatchedSeconds).Error; err != nil {
-			// Log error but don't fail request?
-			// log.Printf("Failed to update viewer stats: %v", err)
-		}
-	}
-
-	// Return updated aggregate with basic creator profile fields
-	var resp AnalyticsResponse
-	if err := h.db.Raw(`
-        SELECT ca.creator_id,
-               ca.views,
-               ca.watch_time_seconds,
-               json_build_object(
-                   'id', cp.id,
-                   'user_id', cp.user_id,
-                   'display_name', cp.display_name
-               ) AS creator_profile
-        FROM creator_analytics ca
-        JOIN creator_profiles cp ON cp.id = ca.creator_id
-        WHERE ca.creator_id = ?
-        LIMIT 1`, out.CreatorID).Scan(&resp).Error; err != nil {
-		http.Error(w, "Failed to load analytics", http.StatusInternalServerError)
-		return
+			  updated_at = NOW()`, userID, out.CreatorID, firstOfMonth, req.WatchedSeconds)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(WatchResponse{
+		Success:    true,
+		FirstWatch: firstWatch,
+		Tracked:    true,
+	})
 }

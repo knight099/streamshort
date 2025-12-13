@@ -812,23 +812,33 @@ func (h *CreatorPaymentHandler) TrackSeriesView(w http.ResponseWriter, r *http.R
 	}
 	userAgent := r.Header.Get("User-Agent")
 
-	// Use upsert pattern: increment view_count if (series_id, user_id) exists, otherwise create new row
+	alreadyViewed := false
+
+	// For authenticated users: only increment view_count on first view (INSERT succeeds)
 	if userID != nil {
-		// For authenticated users: upsert by (series_id, user_id)
-		if err := h.db.Exec(`
+		// Try to insert a new view record; if conflict (already exists), do nothing
+		result := h.db.Exec(`
 			INSERT INTO series_views (id, series_id, user_id, view_count, ip_address, user_agent, created_at, updated_at)
 			VALUES (gen_random_uuid(), ?, ?, 1, ?, ?, NOW(), NOW())
 			ON CONFLICT (series_id, user_id) WHERE user_id IS NOT NULL
-			DO UPDATE SET
-				view_count = series_views.view_count + 1,
-				ip_address = EXCLUDED.ip_address,
-				user_agent = EXCLUDED.user_agent,
-				updated_at = NOW()
-		`, seriesID, *userID, ipAddress, userAgent).Error; err != nil {
-			log.Printf("Warning: Failed to upsert series view record: %v", err)
+			DO NOTHING
+		`, seriesID, *userID, ipAddress, userAgent)
+
+		if result.Error != nil {
+			log.Printf("Warning: Failed to insert series view record: %v", result.Error)
+		}
+
+		// Only increment series.view_count if this was a first-time view (row was inserted)
+		if result.RowsAffected > 0 {
+			if err := h.db.Model(&series).Update("view_count", gorm.Expr("view_count + 1")).Error; err != nil {
+				log.Printf("Warning: Failed to increment view count: %v", err)
+			}
+		} else {
+			alreadyViewed = true
 		}
 	} else {
-		// For anonymous users: create individual records (can't aggregate by NULL user_id)
+		// For anonymous users: create individual records BUT don't increment view_count
+		// (anonymous views are not counted to prevent abuse)
 		view := models.SeriesView{
 			SeriesID:  seriesID,
 			UserID:    nil,
@@ -839,20 +849,18 @@ func (h *CreatorPaymentHandler) TrackSeriesView(w http.ResponseWriter, r *http.R
 		if err := h.db.Create(&view).Error; err != nil {
 			log.Printf("Warning: Failed to create anonymous series view record: %v", err)
 		}
+		// Note: For anonymous users, we don't increment series.view_count
+		// This prevents gaming the view count metric
 	}
 
-	// Increment view count on series table
-	if err := h.db.Model(&series).Update("view_count", gorm.Expr("view_count + 1")).Error; err != nil {
-		log.Printf("Warning: Failed to increment view count: %v", err)
-	}
-
-	// Reload to get updated count
+	// Reload to get current count
 	h.db.Where("id = ?", seriesID).First(&series)
 
 	response := map[string]interface{}{
-		"success":    true,
-		"series_id":  seriesID,
-		"view_count": series.ViewCount,
+		"success":        true,
+		"series_id":      seriesID,
+		"view_count":     series.ViewCount,
+		"already_viewed": alreadyViewed,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
