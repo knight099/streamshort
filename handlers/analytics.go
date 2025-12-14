@@ -93,17 +93,17 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 	if info.DurationSeconds > 0 {
 		err = h.db.Raw(`
 			INSERT INTO user_episode_watches (id, user_id, episode_id, watched_seconds, first_watched_at)
-			VALUES (gen_random_uuid(), $1, $2, LEAST($3, $4), NOW())
+			VALUES (gen_random_uuid(), $1, $2, LEAST($3::integer, $4::integer), NOW())
 			ON CONFLICT (user_id, episode_id)
 			DO UPDATE SET
-				watched_seconds = LEAST(user_episode_watches.watched_seconds + EXCLUDED.watched_seconds, $4)
+				watched_seconds = LEAST(user_episode_watches.watched_seconds + EXCLUDED.watched_seconds, $4::integer)
 			RETURNING (xmax = 0) AS is_new
 		`, userID, req.EpisodeID, req.WatchedSeconds, info.DurationSeconds).Scan(&isNewWatch).Error
 	} else {
 		// No duration cap - just accumulate
 		err = h.db.Raw(`
 			INSERT INTO user_episode_watches (id, user_id, episode_id, watched_seconds, first_watched_at)
-			VALUES (gen_random_uuid(), $1, $2, $3, NOW())
+			VALUES (gen_random_uuid(), $1, $2, $3::integer, NOW())
 			ON CONFLICT (user_id, episode_id)
 			DO UPDATE SET
 				watched_seconds = user_episode_watches.watched_seconds + EXCLUDED.watched_seconds
