@@ -101,30 +101,34 @@ func (h *CreatorPaymentHandler) calculateEarningsSummary(creatorID string) (*mod
 	// Check if can request payout
 	summary.CanRequestPayout = pendingEarnings >= models.MinimumPayoutThreshold
 
-	// Get subscription revenue breakdown
+	// Get subscription revenue from creator_payouts (proportional distribution model)
 	var subTotal float64
-	var subCount int64
-	if err := h.db.Model(&models.CreatorEarnings{}).
-		Where("creator_id = ? AND earnings_type = 'subscription' AND status != 'cancelled'", creatorID).
-		Select("COALESCE(SUM(amount), 0)").
-		Scan(&subTotal).Error; err != nil {
+	if err := h.db.Raw(`
+		SELECT COALESCE(SUM(total_earnings), 0)
+		FROM creator_payouts
+		WHERE creator_id = $1 AND status = 'pending'
+	`, creatorID).Scan(&subTotal).Error; err != nil {
 		return nil, err
 	}
 
-	// Count unique active subscribers who generated subscription earnings for this creator
-	// Since subscriptions are global (not series-specific), we count from earnings records
-	if err := h.db.Model(&models.CreatorEarnings{}).
-		Where("creator_id = ? AND earnings_type = 'subscription' AND status = 'pending'", creatorID).
-		Distinct("subscription_id").
-		Count(&subCount).Error; err != nil {
-		// Fallback: set to 0
-		subCount = 0
-	}
+	// Add subscription earnings from creator_payouts to totals
+	summary.TotalEarnings = summary.TotalEarnings + subTotal
+	summary.PendingEarnings = summary.PendingEarnings + subTotal
+	summary.AvailableForPayout = summary.AvailableForPayout + subTotal
+	summary.CanRequestPayout = summary.AvailableForPayout >= models.MinimumPayoutThreshold
+
+	// Count subscribers from monthly_viewer_stats for this creator
+	var subCount int64
+	h.db.Raw(`
+		SELECT COUNT(DISTINCT user_id)
+		FROM monthly_viewer_stats
+		WHERE creator_id = $1 AND month_date = DATE_TRUNC('month', CURRENT_DATE)
+	`, creatorID).Scan(&subCount)
 
 	summary.Breakdown.SubscriptionRevenue = models.SubscriptionRevenueBreakdown{
 		Total:               subTotal,
 		ActiveSubscriptions: subCount,
-		MonthlyRecurring:    subTotal / 12, // Rough estimate
+		MonthlyRecurring:    subTotal, // Current month's earnings
 	}
 
 	// Get one-time purchase breakdown

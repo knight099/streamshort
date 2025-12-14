@@ -212,4 +212,38 @@ func (h *AnalyticsHandler) calculateRealtimeEarnings(userID, creatorID string, m
 			total_earnings = EXCLUDED.total_earnings,
 			updated_at = NOW()
 	`, creatorID, monthDate, totalCreatorEarnings)
+
+	// Also populate creator_earnings with individual subscriber contributions
+	// This creates/updates a record for each subscriber who watched this creator
+	h.db.Exec(`
+		INSERT INTO creator_earnings (id, creator_id, amount, earnings_type, subscription_id, status, created_at, updated_at)
+		SELECT 
+			gen_random_uuid(),
+			$1,
+			CASE 
+				WHEN mvs.watch_time_seconds > 0 AND user_total.total_watch > 0 
+				THEN sr.distributable * (mvs.watch_time_seconds::float / user_total.total_watch::float)
+				ELSE 0 
+			END as amount,
+			'subscription',
+			sr.subscription_id,
+			'pending',
+			NOW(),
+			NOW()
+		FROM subscription_revenues sr
+		JOIN monthly_viewer_stats mvs ON mvs.user_id = sr.user_id AND mvs.month_date = sr.month_date
+		JOIN (
+			SELECT user_id, month_date, SUM(watch_time_seconds) as total_watch
+			FROM monthly_viewer_stats
+			GROUP BY user_id, month_date
+		) user_total ON user_total.user_id = sr.user_id AND user_total.month_date = sr.month_date
+		WHERE sr.month_date = $2
+		AND sr.is_distributed = false
+		AND mvs.creator_id = $1
+		AND mvs.watch_time_seconds > 0
+		ON CONFLICT (creator_id, subscription_id) WHERE subscription_id IS NOT NULL
+		DO UPDATE SET
+			amount = EXCLUDED.amount,
+			updated_at = NOW()
+	`, creatorID, monthDate)
 }
