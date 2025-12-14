@@ -159,67 +159,57 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 }
 
 // calculateRealtimeEarnings calculates and updates creator earnings based on
-// user's subscription revenue proportionally distributed by watch time.
+// ALL subscribers' proportional watch time distribution.
 // This runs asynchronously in a goroutine.
 func (h *AnalyticsHandler) calculateRealtimeEarnings(userID, creatorID string, monthDate time.Time) {
-	// 1. Get user's distributable subscription revenue for this month
-	var distributable float64
+	// Calculate total earnings for this creator from ALL subscribers
+	// Formula: For each subscriber, (creator_watch_time / user_total_watch_time) * user_distributable
+	// Then sum across all subscribers
+
+	var totalCreatorEarnings float64
 	err := h.db.Raw(`
-		SELECT COALESCE(SUM(distributable), 0)
-		FROM subscription_revenues
-		WHERE user_id = ? AND month_date = ?
-	`, userID, monthDate).Scan(&distributable).Error
+		SELECT COALESCE(SUM(
+			CASE 
+				WHEN mvs.watch_time_seconds > 0 AND user_total.total_watch > 0 
+				THEN sr.distributable * (mvs.watch_time_seconds::float / user_total.total_watch::float)
+				ELSE 0 
+			END
+		), 0) as creator_earnings
+		FROM subscription_revenues sr
+		JOIN monthly_viewer_stats mvs ON mvs.user_id = sr.user_id AND mvs.month_date = sr.month_date
+		JOIN (
+			SELECT user_id, month_date, SUM(watch_time_seconds) as total_watch
+			FROM monthly_viewer_stats
+			GROUP BY user_id, month_date
+		) user_total ON user_total.user_id = sr.user_id AND user_total.month_date = sr.month_date
+		WHERE sr.month_date = $1 
+		AND sr.is_distributed = false
+		AND mvs.creator_id = $2
+	`, monthDate, creatorID).Scan(&totalCreatorEarnings).Error
 
-	if err != nil || distributable == 0 {
-		// User has no subscription for this month, no earnings to distribute
+	if err != nil {
+		log.Printf("Failed to calculate creator earnings: %v", err)
 		return
 	}
 
-	// 2. Get user's total watch time across ALL creators this month
-	var totalWatchTime int64
-	err = h.db.Raw(`
-		SELECT COALESCE(SUM(watch_time_seconds), 0)
-		FROM monthly_viewer_stats
-		WHERE user_id = ? AND month_date = ?
-	`, userID, monthDate).Scan(&totalWatchTime).Error
-
-	if err != nil || totalWatchTime == 0 {
+	if totalCreatorEarnings <= 0 {
 		return
 	}
 
-	// 3. Get user's watch time for THIS specific creator this month
-	var creatorWatchTime int64
-	err = h.db.Raw(`
-		SELECT COALESCE(watch_time_seconds, 0)
-		FROM monthly_viewer_stats
-		WHERE user_id = ? AND creator_id = ? AND month_date = ?
-	`, userID, creatorID, monthDate).Scan(&creatorWatchTime).Error
-
-	if err != nil || creatorWatchTime == 0 {
-		return
-	}
-
-	// 4. Calculate this creator's proportional share of the user's subscription
-	// Formula: (creator_watch_time / total_watch_time) * distributable_amount
-	shareFraction := float64(creatorWatchTime) / float64(totalWatchTime)
-	creatorEarnings := distributable * shareFraction
-
-	// 5. Update creator's estimated earnings in creator_analytics for today
-	if err := h.db.Exec(`
+	// Update creator's estimated earnings in creator_analytics for today
+	h.db.Exec(`
 		UPDATE creator_analytics 
-		SET earnings = ?, updated_at = NOW()
-		WHERE creator_id = ? AND date = CURRENT_DATE
-	`, creatorEarnings, creatorID).Error; err != nil {
-		log.Printf("Failed to update creator earnings: %v", err)
-	}
+		SET earnings = $1, updated_at = NOW()
+		WHERE creator_id = $2 AND date = CURRENT_DATE
+	`, totalCreatorEarnings, creatorID)
 
-	// 6. Upsert into creator_payouts for this month (running estimate)
+	// Upsert into creator_payouts for this month (running estimate)
 	h.db.Exec(`
 		INSERT INTO creator_payouts (id, creator_id, month_date, total_earnings, status, created_at, updated_at)
-		VALUES (gen_random_uuid(), ?, ?, ?, 'pending', NOW(), NOW())
+		VALUES (gen_random_uuid(), $1, $2, $3, 'pending', NOW(), NOW())
 		ON CONFLICT (creator_id, month_date)
 		DO UPDATE SET
 			total_earnings = EXCLUDED.total_earnings,
 			updated_at = NOW()
-	`, creatorID, monthDate, creatorEarnings)
+	`, creatorID, monthDate, totalCreatorEarnings)
 }
