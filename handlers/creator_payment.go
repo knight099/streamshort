@@ -67,20 +67,21 @@ func (h *CreatorPaymentHandler) calculateEarningsSummary(creatorID string) (*mod
 		Currency:         "INR",
 	}
 
-	// Get total earnings
+	// Get non-subscription earnings from creator_earnings (one_time, ad_revenue)
+	// Subscription earnings come from creator_payouts to avoid double-counting
 	var totalEarnings float64
 	if err := h.db.Model(&models.CreatorEarnings{}).
-		Where("creator_id = ? AND status != 'cancelled'", creatorID).
+		Where("creator_id = ? AND status != 'cancelled' AND earnings_type != 'subscription'", creatorID).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&totalEarnings).Error; err != nil {
 		return nil, err
 	}
 	summary.TotalEarnings = totalEarnings
 
-	// Get pending earnings
+	// Get pending non-subscription earnings
 	var pendingEarnings float64
 	if err := h.db.Model(&models.CreatorEarnings{}).
-		Where("creator_id = ? AND status = 'pending'", creatorID).
+		Where("creator_id = ? AND status = 'pending' AND earnings_type != 'subscription'", creatorID).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&pendingEarnings).Error; err != nil {
 		return nil, err
@@ -88,7 +89,7 @@ func (h *CreatorPaymentHandler) calculateEarningsSummary(creatorID string) (*mod
 	summary.PendingEarnings = pendingEarnings
 	summary.AvailableForPayout = pendingEarnings
 
-	// Get paid earnings
+	// Get paid earnings (all types)
 	var paidEarnings float64
 	if err := h.db.Model(&models.CreatorEarnings{}).
 		Where("creator_id = ? AND status = 'paid'", creatorID).
@@ -101,7 +102,7 @@ func (h *CreatorPaymentHandler) calculateEarningsSummary(creatorID string) (*mod
 	// Check if can request payout
 	summary.CanRequestPayout = pendingEarnings >= models.MinimumPayoutThreshold
 
-	// Get subscription revenue from creator_payouts (proportional distribution model)
+	// Get subscription revenue from creator_payouts (single source of truth)
 	var subTotal float64
 	if err := h.db.Raw(`
 		SELECT COALESCE(SUM(total_earnings), 0)
