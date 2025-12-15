@@ -690,7 +690,8 @@ func (h *ContentHandler) RequestUploadURL(w http.ResponseWriter, r *http.Request
 	}
 
 	// Additional validation based on file type
-	if fileType == "thumbnail" {
+	switch fileType {
+	case "thumbnail":
 		// Validate it's an image
 		if !strings.HasPrefix(req.ContentType, "image/") {
 			http.Error(w, "Thumbnail must be an image file", http.StatusBadRequest)
@@ -701,7 +702,7 @@ func (h *ContentHandler) RequestUploadURL(w http.ResponseWriter, r *http.Request
 			http.Error(w, "Thumbnail size must not exceed 5MB", http.StatusBadRequest)
 			return
 		}
-	} else if fileType == "video" {
+	case "video":
 		// Validate it's a video
 		if !strings.HasPrefix(req.ContentType, "video/") {
 			http.Error(w, "Video file must have video/* content type", http.StatusBadRequest)
@@ -795,7 +796,10 @@ func (h *ContentHandler) NotifyUploadComplete(w http.ResponseWriter, r *http.Req
 			http.Error(w, "Upload request not found", http.StatusNotFound)
 			return
 		}
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		// Log the actual error for debugging
+		fmt.Printf("ERROR: Failed to query upload_requests table: %v\n", err)
+		fmt.Printf("Upload ID: %s, User ID: %s\n", uploadID, userID)
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
