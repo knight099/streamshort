@@ -671,12 +671,51 @@ func (h *ContentHandler) RequestUploadURL(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Detect file type from content type or metadata
+	fileType := "video" // default
+	if req.Metadata != nil {
+		if typeVal, ok := req.Metadata["type"].(string); ok {
+			fileType = typeVal
+		}
+	}
+	// If not specified in metadata, detect from content type
+	if fileType == "video" && strings.HasPrefix(req.ContentType, "image/") {
+		fileType = "thumbnail"
+	}
+
+	// Validate file type
+	if fileType != "video" && fileType != "thumbnail" && fileType != "caption" {
+		http.Error(w, "Invalid file type. Must be 'video', 'thumbnail', or 'caption'", http.StatusBadRequest)
+		return
+	}
+
+	// Additional validation based on file type
+	if fileType == "thumbnail" {
+		// Validate it's an image
+		if !strings.HasPrefix(req.ContentType, "image/") {
+			http.Error(w, "Thumbnail must be an image file", http.StatusBadRequest)
+			return
+		}
+		// Check size limit (5MB for thumbnails)
+		if req.SizeBytes > 5*1024*1024 {
+			http.Error(w, "Thumbnail size must not exceed 5MB", http.StatusBadRequest)
+			return
+		}
+	} else if fileType == "video" {
+		// Validate it's a video
+		if !strings.HasPrefix(req.ContentType, "video/") {
+			http.Error(w, "Video file must have video/* content type", http.StatusBadRequest)
+			return
+		}
+	}
+
 	// Create upload request record (ID is auto-generated as UUID by the database)
 	uploadReq := models.UploadRequest{
 		UserID:      userID,
 		Filename:    req.Filename,
 		ContentType: req.ContentType,
 		SizeBytes:   req.SizeBytes,
+		FileType:    fileType,
 		Metadata:    req.Metadata,
 		Status:      "pending",
 	}
@@ -695,11 +734,12 @@ func (h *ContentHandler) RequestUploadURL(w http.ResponseWriter, r *http.Request
 	// Generate real S3 pre-signed URL if AWS is configured
 	if h.aws != nil && h.aws.IsConfigured() {
 		var err error
-		presignedURL, err = h.aws.GenerateUploadPresignedURL(
+		presignedURL, err = h.aws.GenerateUploadPresignedURLWithType(
 			r.Context(),
 			uploadID,
 			req.Filename,
 			req.ContentType,
+			fileType,
 			time.Duration(expiresIn)*time.Second,
 		)
 		if err != nil {
@@ -708,7 +748,7 @@ func (h *ContentHandler) RequestUploadURL(w http.ResponseWriter, r *http.Request
 		}
 	} else {
 		// Fallback to mock URL for development
-		presignedURL = fmt.Sprintf("https://s3.amazonaws.com/bucket/%s?AWSAccessKeyId=mock&Signature=mock", uploadID)
+		presignedURL = fmt.Sprintf("https://s3.amazonaws.com/bucket/%s/%s?AWSAccessKeyId=mock&Signature=mock", fileType, uploadID)
 	}
 
 	response := UploadUrlResponse{
@@ -748,9 +788,19 @@ func (h *ContentHandler) NotifyUploadComplete(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Get upload request to determine file type
+	var uploadReq models.UploadRequest
+	if err := h.db.Where("id = ? AND user_id = ?", uploadID, userID).First(&uploadReq).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Upload request not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
 	// Update upload request status
-	if err := h.db.Model(&models.UploadRequest{}).
-		Where("id = ? AND user_id = ?", uploadID, userID).
+	if err := h.db.Model(&uploadReq).
 		Updates(map[string]interface{}{
 			"status":     "completed",
 			"updated_at": time.Now(),
@@ -759,7 +809,54 @@ func (h *ContentHandler) NotifyUploadComplete(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// If episode_id is provided, update the episode's s3_master_path
+	// Handle based on file type
+	if uploadReq.FileType == "thumbnail" {
+		// Check if series_id is in metadata
+		if uploadReq.Metadata != nil {
+			if seriesIDVal, ok := uploadReq.Metadata["series_id"]; ok {
+				seriesID := fmt.Sprintf("%v", seriesIDVal)
+
+				// Verify ownership: series owned by this creator
+				var series models.Series
+				err := h.db.Joins("JOIN creator_profiles ON series.creator_id = creator_profiles.id").
+					Where("series.id = ? AND creator_profiles.user_id = ?", seriesID, userID).
+					First(&series).Error
+
+				if err == nil {
+					// Generate public URL from S3 path
+					// For now, use the S3 path directly; in production, this would be a CloudFront or public S3 URL
+					thumbnailURL := req.S3Path
+					if h.aws != nil && h.aws.IsConfigured() {
+						// Convert s3:// path to HTTPS URL
+						// Format: https://bucket-name.s3.region.amazonaws.com/key
+						key := h.aws.ExtractS3Key(req.S3Path)
+						if key != "" {
+							thumbnailURL = fmt.Sprintf("https://%s.s3.amazonaws.com/%s", h.aws.GetBucket(), key)
+						}
+					}
+
+					// Update series thumbnail_url
+					if err := h.db.Model(&series).Updates(map[string]interface{}{
+						"thumbnail_url": thumbnailURL,
+						"updated_at":    time.Now(),
+					}).Error; err != nil {
+						fmt.Printf("Warning: Failed to update series thumbnail_url: %v\n", err)
+					}
+				}
+			}
+		}
+
+		// Return success for thumbnail upload
+		response := UploadNotifyResponse{
+			Status: "completed",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// Handle video uploads (existing logic)
 	if req.EpisodeID != "" {
 		// Verify ownership: episode belongs to a series owned by this creator
 		var episode models.Episode
@@ -781,7 +878,7 @@ func (h *ContentHandler) NotifyUploadComplete(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	// TODO: In production, trigger transcoding job here
+	// TODO: In production, trigger transcoding job here for videos
 	response := UploadNotifyResponse{
 		Status: "queued_for_transcoding",
 	}

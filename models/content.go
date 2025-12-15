@@ -62,6 +62,7 @@ type UploadRequest struct {
 	Filename    string                 `json:"filename" gorm:"not null"`
 	ContentType string                 `json:"content_type" gorm:"not null"`
 	SizeBytes   int64                  `json:"size_bytes" gorm:"not null"`
+	FileType    string                 `json:"file_type" gorm:"type:varchar(20);default:'video';check:file_type IN ('video', 'thumbnail', 'caption')"`
 	Metadata    map[string]interface{} `json:"metadata" gorm:"type:jsonb"`
 	Status      string                 `json:"status" gorm:"type:varchar(30);default:'pending';check:status IN ('pending', 'uploading', 'completed', 'failed')"`
 	CreatedAt   time.Time              `json:"created_at"`

@@ -116,8 +116,24 @@ func parsePrivateKey(keyData []byte) (*rsa.PrivateKey, error) {
 }
 
 // GenerateUploadPresignedURL generates a pre-signed URL for uploading to S3
+// fileType can be "video", "thumbnail", or "caption" to determine the S3 prefix
 func (s *AWSService) GenerateUploadPresignedURL(ctx context.Context, uploadID, filename, contentType string, expiresIn time.Duration) (string, error) {
-	key := fmt.Sprintf("uploads/%s/%s", uploadID, filename)
+	return s.GenerateUploadPresignedURLWithType(ctx, uploadID, filename, contentType, "video", expiresIn)
+}
+
+// GenerateUploadPresignedURLWithType generates a pre-signed URL with specific file type
+func (s *AWSService) GenerateUploadPresignedURLWithType(ctx context.Context, uploadID, filename, contentType, fileType string, expiresIn time.Duration) (string, error) {
+	var prefix string
+	switch fileType {
+	case "thumbnail":
+		prefix = "thumbnails"
+	case "caption":
+		prefix = "captions"
+	default:
+		prefix = "uploads"
+	}
+
+	key := fmt.Sprintf("%s/%s/%s", prefix, uploadID, filename)
 
 	presignedReq, err := s.s3PresignClient.PresignPutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
@@ -133,7 +149,21 @@ func (s *AWSService) GenerateUploadPresignedURL(ctx context.Context, uploadID, f
 
 // GetS3Path returns the S3 path for an upload
 func (s *AWSService) GetS3Path(uploadID, filename string) string {
-	return fmt.Sprintf("s3://%s/uploads/%s/%s", s.bucket, uploadID, filename)
+	return s.GetS3PathWithType(uploadID, filename, "video")
+}
+
+// GetS3PathWithType returns the S3 path for an upload with specific file type
+func (s *AWSService) GetS3PathWithType(uploadID, filename, fileType string) string {
+	var prefix string
+	switch fileType {
+	case "thumbnail":
+		prefix = "thumbnails"
+	case "caption":
+		prefix = "captions"
+	default:
+		prefix = "uploads"
+	}
+	return fmt.Sprintf("s3://%s/%s/%s/%s", s.bucket, prefix, uploadID, filename)
 }
 
 // GenerateCloudFrontSignedURL generates a signed URL for CloudFront streaming
