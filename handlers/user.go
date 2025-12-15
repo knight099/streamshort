@@ -52,7 +52,7 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	var planName *string
 	var expiresAt *string
 
-	err := h.db.Where("user_id = ? AND status = 'active' AND current_period_end > ?", userID, time.Now()).
+	err := h.db.Where("user_id = ? AND status = 'active' AND end_date > ?", userID, time.Now()).
 		Preload("Plan").
 		First(&subscription).Error
 
@@ -61,10 +61,8 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		if subscription.Plan != nil {
 			planName = &subscription.Plan.Name
 		}
-		if subscription.CurrentPeriodEnd != nil {
-			formatted := subscription.CurrentPeriodEnd.Format(time.RFC3339)
-			expiresAt = &formatted
-		}
+		formatted := subscription.EndDate.Format(time.RFC3339)
+		expiresAt = &formatted
 	}
 
 	resp := UserProfileResponse{
