@@ -56,9 +56,10 @@ type UpdateSeriesRequest struct {
 }
 
 type CreateEpisodeRequest struct {
-	Title           string `json:"title"`
-	EpisodeNumber   int    `json:"episode_number"`
-	DurationSeconds int    `json:"duration_seconds"`
+	Title           string  `json:"title"`
+	EpisodeNumber   int     `json:"episode_number"`
+	DurationSeconds int     `json:"duration_seconds"`
+	ThumbURL        *string `json:"thumb_url"`
 }
 
 type SeriesListItem struct {
@@ -624,6 +625,7 @@ func (h *ContentHandler) CreateEpisode(w http.ResponseWriter, r *http.Request) {
 		Title:           req.Title,
 		EpisodeNumber:   req.EpisodeNumber,
 		DurationSeconds: req.DurationSeconds,
+		ThumbURL:        req.ThumbURL,
 		Status:          "pending_upload",
 	}
 
@@ -1218,6 +1220,7 @@ type UpdateEpisodeRequest struct {
 	Title           *string `json:"title"`
 	EpisodeNumber   *int    `json:"episode_number"`
 	DurationSeconds *int    `json:"duration_seconds"`
+	ThumbURL        *string `json:"thumb_url"`
 }
 
 // UpdateEpisode allows the creator to edit episode metadata (title, number, duration)
@@ -1281,6 +1284,9 @@ func (h *ContentHandler) UpdateEpisode(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		updates["episode_number"] = *req.EpisodeNumber
+	}
+	if req.ThumbURL != nil {
+		updates["thumb_url"] = *req.ThumbURL
 	}
 
 	if len(updates) == 0 {
