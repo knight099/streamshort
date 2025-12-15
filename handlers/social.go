@@ -40,6 +40,24 @@ type RatingResponse struct {
 	TotalRatings  int64   `json:"total_ratings"`
 }
 
+// LikedEpisodeItem represents a single liked episode with details
+type LikedEpisodeItem struct {
+	EpisodeID     string  `json:"episode_id"`
+	EpisodeTitle  string  `json:"episode_title"`
+	EpisodeNumber int     `json:"episode_number"`
+	SeriesID      string  `json:"series_id"`
+	SeriesTitle   string  `json:"series_title"`
+	ThumbnailURL  *string `json:"thumbnail_url"`
+	LikeCount     int64   `json:"like_count"`
+	LikedAt       string  `json:"liked_at"`
+}
+
+// LikedEpisodesResponse is the response for the liked episodes endpoint
+type LikedEpisodesResponse struct {
+	Items []LikedEpisodeItem `json:"items"`
+	Total int                `json:"total"`
+}
+
 // GetLikeStatus returns the like status for an episode
 // GET /api/episodes/{id}/like
 func (h *SocialHandler) GetLikeStatus(w http.ResponseWriter, r *http.Request) {
@@ -246,5 +264,53 @@ func (h *SocialHandler) RateSeries(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetLikedEpisodes returns all episodes liked by the authenticated user
+// GET /api/me/liked-episodes
+func (h *SocialHandler) GetLikedEpisodes(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context (set by auth middleware)
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	// Query liked episodes with episode and series details
+	var items []LikedEpisodeItem
+	err := h.db.Raw(`
+		SELECT 
+			el.episode_id,
+			e.title as episode_title,
+			e.episode_number,
+			s.id as series_id,
+			s.title as series_title,
+			COALESCE(e.thumb_url, s.thumbnail_url) as thumbnail_url,
+			e.like_count,
+			el.created_at as liked_at
+		FROM episode_likes el
+		JOIN episodes e ON e.id = el.episode_id
+		JOIN series s ON s.id = e.series_id
+		WHERE el.user_id = ? AND el.deleted_at IS NULL
+		ORDER BY el.created_at DESC
+		LIMIT 100
+	`, userID).Scan(&items).Error
+
+	if err != nil {
+		http.Error(w, "Failed to fetch liked episodes", http.StatusInternalServerError)
+		return
+	}
+
+	if items == nil {
+		items = []LikedEpisodeItem{}
+	}
+
+	response := LikedEpisodesResponse{
+		Items: items,
+		Total: len(items),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }

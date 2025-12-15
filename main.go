@@ -125,6 +125,7 @@ func main() {
 	protected.HandleFunc("/profile", userHandler.GetProfile).Methods("GET")
 	protected.HandleFunc("/profile", userHandler.UpdateProfile).Methods("PUT")
 	protected.HandleFunc("/me/watch-history", userHandler.GetWatchHistory).Methods("GET")
+	protected.HandleFunc("/me/liked-episodes", socialHandler.GetLikedEpisodes).Methods("GET")
 
 	// Creator routes (protected)
 	protected.HandleFunc("/creators/profile", creatorHandler.GetCreatorProfile).Methods("GET")
