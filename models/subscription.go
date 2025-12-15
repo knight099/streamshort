@@ -23,8 +23,11 @@ type Subscription struct {
 	UpdatedAt              time.Time      `json:"updated_at"`
 	DeletedAt              gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
+	CurrentPeriodEnd *time.Time `json:"current_period_end" gorm:"type:timestamptz"`
+
 	// Relationships
-	User *User `json:"user" gorm:"foreignKey:UserID"`
+	User *User             `json:"user" gorm:"foreignKey:UserID"`
+	Plan *SubscriptionPlan `json:"plan" gorm:"foreignKey:PlanID;references:ID"`
 }
 
 // SubscriptionPlan represents available subscription plans

@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"streamshort/models"
 
@@ -18,16 +19,19 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 }
 
 type UserProfileResponse struct {
-	ID    string `json:"id"`
-	Phone string `json:"phone"`
-	Name  string `json:"name"`
+	ID           string  `json:"id"`
+	Phone        string  `json:"phone"`
+	Name         string  `json:"name"`
+	IsSubscribed bool    `json:"is_subscribed"`
+	PlanName     *string `json:"plan_name,omitempty"`
+	ExpiresAt    *string `json:"subscription_expires_at,omitempty"`
 }
 
 type UpdateProfileRequest struct {
 	Name string `json:"name"`
 }
 
-// GetProfile returns the authenticated user's profile
+// GetProfile returns the authenticated user's profile with subscription status
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	userIDAny := r.Context().Value("user_id")
 	if userIDAny == nil {
@@ -42,7 +46,35 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := UserProfileResponse{ID: user.ID, Phone: user.Phone, Name: user.Name}
+	// Check subscription status
+	var subscription models.Subscription
+	isSubscribed := false
+	var planName *string
+	var expiresAt *string
+
+	err := h.db.Where("user_id = ? AND status = 'active' AND current_period_end > ?", userID, time.Now()).
+		Preload("Plan").
+		First(&subscription).Error
+
+	if err == nil {
+		isSubscribed = true
+		if subscription.Plan != nil {
+			planName = &subscription.Plan.Name
+		}
+		if subscription.CurrentPeriodEnd != nil {
+			formatted := subscription.CurrentPeriodEnd.Format(time.RFC3339)
+			expiresAt = &formatted
+		}
+	}
+
+	resp := UserProfileResponse{
+		ID:           user.ID,
+		Phone:        user.Phone,
+		Name:         user.Name,
+		IsSubscribed: isSubscribed,
+		PlanName:     planName,
+		ExpiresAt:    expiresAt,
+	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
 }
