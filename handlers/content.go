@@ -1299,6 +1299,19 @@ func (h *ContentHandler) UpdateSeriesStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Block publishing if creator KYC is not verified
+	if status == "published" {
+		var creatorProfile models.CreatorProfile
+		if err := h.db.Where("user_id = ?", userID).First(&creatorProfile).Error; err != nil {
+			http.Error(w, "Creator profile not found", http.StatusNotFound)
+			return
+		}
+		if creatorProfile.KYCStatus != "verified" {
+			http.Error(w, "KYC verification required before publishing. Please wait for admin approval.", http.StatusForbidden)
+			return
+		}
+	}
+
 	updates := map[string]interface{}{
 		"status":     status,
 		"updated_at": time.Now(),

@@ -212,6 +212,10 @@ func main() {
 	adminProtected.HandleFunc("/earnings", adminHandler.AdminListEarnings).Methods("GET")
 	adminProtected.HandleFunc("/revenue-summary", adminHandler.AdminGetRevenueSummary).Methods("GET")
 
+	// Admin KYC Verification
+	adminProtected.HandleFunc("/kyc", adminHandler.AdminListPendingKYC).Methods("GET")
+	adminProtected.HandleFunc("/kyc/{id}/verify", adminHandler.AdminVerifyKYC).Methods("POST")
+
 	// CORS configuration
 	c := cors.New(cors.Options{
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},

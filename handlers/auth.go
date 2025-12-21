@@ -583,6 +583,7 @@ func (h *AuthHandler) EnsureDefaultAdmin() {
 		log.Println("[auth] No admin found. Creating default admin...")
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 		admin := models.User{
+			Phone:        "admin_default_" + uuid.New().String(),
 			Username:     "admin",
 			PasswordHash: string(hashedPassword),
 			Role:         "admin",
@@ -609,6 +610,13 @@ func (h *AuthHandler) CreateAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if username already exists
+	var existingUser models.User
+	if err := h.db.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
+		http.Error(w, "Username already taken", http.StatusConflict)
+		return
+	}
+
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -616,15 +624,20 @@ func (h *AuthHandler) CreateAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate unique placeholder phone for admin accounts (avoids unique constraint issue)
+	adminPhone := "admin_" + uuid.New().String()
+
 	user := models.User{
+		Phone:        adminPhone,
 		Username:     req.Username,
 		PasswordHash: string(hashedPassword),
 		Role:         "admin",
+		Name:         req.Username, // Use username as display name
 	}
 
 	if err := h.db.Create(&user).Error; err != nil {
 		log.Printf("[auth] CreateAdmin: db error: %v", err)
-		http.Error(w, "Failed to create admin (username might be taken)", http.StatusInternalServerError)
+		http.Error(w, "Failed to create admin", http.StatusInternalServerError)
 		return
 	}
 

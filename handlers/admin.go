@@ -870,3 +870,120 @@ func (h *AdminHandler) AdminListAllSeries(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+
+// ========== ADMIN KYC VERIFICATION ==========
+
+// AdminListPendingKYC lists all creators with pending KYC
+func (h *AdminHandler) AdminListPendingKYC(w http.ResponseWriter, r *http.Request) {
+	status := r.URL.Query().Get("status") // pending, verified, rejected (defaults to pending)
+	if status == "" {
+		status = "pending"
+	}
+
+	type CreatorKYCResponse struct {
+		ID              string    `json:"id"`
+		UserID          string    `json:"user_id"`
+		DisplayName     string    `json:"display_name"`
+		Bio             string    `json:"bio"`
+		KYCDocumentPath string    `json:"kyc_document_path"`
+		KYCStatus       string    `json:"kyc_status"`
+		CreatedAt       time.Time `json:"created_at"`
+		Phone           string    `json:"phone"`
+	}
+
+	var creators []models.CreatorProfile
+	query := h.db.Model(&models.CreatorProfile{}).Preload("User")
+
+	if status != "all" {
+		query = query.Where("kyc_status = ?", status)
+	}
+
+	if err := query.Order("created_at DESC").Find(&creators).Error; err != nil {
+		http.Error(w, "Failed to fetch creators", http.StatusInternalServerError)
+		return
+	}
+
+	response := make([]CreatorKYCResponse, 0, len(creators))
+	for _, c := range creators {
+		phone := ""
+		if c.User != nil {
+			phone = c.User.Phone
+		}
+
+		response = append(response, CreatorKYCResponse{
+			ID:              c.ID,
+			UserID:          c.UserID,
+			DisplayName:     c.DisplayName,
+			Bio:             c.Bio,
+			KYCDocumentPath: c.KYCDocumentPath,
+			KYCStatus:       c.KYCStatus,
+			CreatedAt:       c.CreatedAt,
+			Phone:           phone,
+		})
+	}
+
+	// Count by status
+	var pendingCount, verifiedCount, rejectedCount int64
+	h.db.Model(&models.CreatorProfile{}).Where("kyc_status = ?", "pending").Count(&pendingCount)
+	h.db.Model(&models.CreatorProfile{}).Where("kyc_status = ?", "verified").Count(&verifiedCount)
+	h.db.Model(&models.CreatorProfile{}).Where("kyc_status = ?", "rejected").Count(&rejectedCount)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"items":          response,
+		"pending_count":  pendingCount,
+		"verified_count": verifiedCount,
+		"rejected_count": rejectedCount,
+	})
+}
+
+// AdminVerifyKYC allows admin to verify or reject a creator's KYC
+func (h *AdminHandler) AdminVerifyKYC(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	creatorID := vars["id"]
+
+	var req struct {
+		Action string `json:"action"` // verify or reject
+		Reason string `json:"reason"` // Required if rejecting
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Action != "verify" && req.Action != "reject" {
+		http.Error(w, "Action must be 'verify' or 'reject'", http.StatusBadRequest)
+		return
+	}
+
+	if req.Action == "reject" && req.Reason == "" {
+		http.Error(w, "Reason is required when rejecting KYC", http.StatusBadRequest)
+		return
+	}
+
+	var creator models.CreatorProfile
+	if err := h.db.First(&creator, "id = ?", creatorID).Error; err != nil {
+		http.Error(w, "Creator not found", http.StatusNotFound)
+		return
+	}
+
+	newStatus := "verified"
+	if req.Action == "reject" {
+		newStatus = "rejected"
+	}
+
+	if err := h.db.Model(&creator).Updates(map[string]interface{}{
+		"kyc_status": newStatus,
+		"updated_at": time.Now(),
+	}).Error; err != nil {
+		http.Error(w, "Failed to update KYC status", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":    fmt.Sprintf("Creator KYC %s successfully", newStatus),
+		"creator_id": creatorID,
+		"kyc_status": newStatus,
+	})
+}
