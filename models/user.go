@@ -7,12 +7,15 @@ import (
 )
 
 type User struct {
-	ID        string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	Phone     string         `json:"phone" gorm:"not null;index:idx_users_phone,unique"`
-	Name      string         `json:"name" gorm:"type:text"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+	ID           string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	Phone        string         `json:"phone,omitempty" gorm:"index:idx_users_phone,unique"`
+	Name         string         `json:"name" gorm:"type:text"`
+	Role         string         `json:"role" gorm:"default:'user'"`                 // 'user' or 'admin'
+	Username     string         `json:"username,omitempty" gorm:"type:text;unique"` // Only for admins
+	PasswordHash string         `json:"-" gorm:"type:text"`                         // Only for admins
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relationships
 	CreatorProfile *CreatorProfile `json:"creator_profile,omitempty" gorm:"foreignKey:UserID"`

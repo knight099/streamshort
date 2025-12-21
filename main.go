@@ -66,6 +66,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(svcs.DB, svcs.FirebaseAPIKey)
+	authHandler.EnsureDefaultAdmin() // Seed default admin if needed
 	creatorHandler := handlers.NewCreatorHandler(svcs.DB)
 	contentHandler := handlers.NewContentHandlerWithServices(svcs.DB, svcs.RDB, awsService)
 	paymentHandler := handlers.NewPaymentHandler(svcs.DB, razorpayClient)
@@ -73,7 +74,7 @@ func main() {
 	socialHandler := handlers.NewSocialHandler(svcs.DB)
 	userHandler := handlers.NewUserHandler(svcs.DB)
 	analyticsHandler := handlers.NewAnalyticsHandler(svcs.DB)
-	adminHandler := handlers.NewAdminHandler()
+	adminHandler := handlers.NewAdminHandler(svcs.DB, awsService)
 	creatorPaymentHandler := handlers.NewCreatorPaymentHandler(svcs.DB, razorpayClient)
 
 	// Initialize middleware
@@ -109,6 +110,7 @@ func main() {
 	r.HandleFunc("/auth/otp/send", authHandler.SendOTP).Methods("POST")
 	r.HandleFunc("/auth/otp/verify", authHandler.VerifyOTP).Methods("POST")
 	r.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
+	r.HandleFunc("/auth/admin/login", authHandler.AdminLogin).Methods("POST")
 	// Firebase phone auth routes
 	r.HandleFunc("/auth/firebase/otp/send", authHandler.FirebaseSendOTP).Methods("POST")
 	r.HandleFunc("/auth/firebase/otp/verify", authHandler.FirebaseVerifyOTP).Methods("POST")
@@ -182,8 +184,33 @@ func main() {
 	protected.HandleFunc("/series/{id}/rating", socialHandler.RateSeries).Methods("POST")
 
 	// Admin routes (protected - admin only)
-	protected.HandleFunc("/admin/uploads/pending", adminHandler.GetPendingUploads).Methods("GET")
-	protected.HandleFunc("/admin/approve-content", adminHandler.ApproveContent).Methods("POST")
+	adminProtected := protected.PathPrefix("/admin").Subrouter()
+	adminProtected.Use(authMiddleware.AdminMiddleware)
+	adminProtected.HandleFunc("/dashboard/stats", adminHandler.AdminDashboardStats).Methods("GET")
+	adminProtected.HandleFunc("/users", adminHandler.AdminListUsers).Methods("GET")
+	adminProtected.HandleFunc("/create-admin", authHandler.CreateAdmin).Methods("POST")
+	adminProtected.HandleFunc("/users/{id}", adminHandler.AdminDeleteUser).Methods("DELETE")
+	adminProtected.HandleFunc("/creators/{id}", adminHandler.AdminDeleteCreator).Methods("DELETE")
+	adminProtected.HandleFunc("/content/series/{id}", adminHandler.AdminDeleteSeries).Methods("DELETE")
+	adminProtected.HandleFunc("/content/episodes/{id}", adminHandler.AdminDeleteEpisode).Methods("DELETE")
+
+	// Admin Content Management
+	adminProtected.HandleFunc("/creators", adminHandler.AdminListCreators).Methods("GET")
+	adminProtected.HandleFunc("/content/series", adminHandler.AdminCreateSeries).Methods("POST")
+	adminProtected.HandleFunc("/content/series", adminHandler.AdminListAllSeries).Methods("GET")
+	adminProtected.HandleFunc("/content/series/{id}/episodes", adminHandler.AdminCreateEpisode).Methods("POST")
+	adminProtected.HandleFunc("/content/upload-url", adminHandler.AdminRequestUploadURL).Methods("POST")
+	adminProtected.HandleFunc("/content/uploads/{id}/notify", adminHandler.AdminNotifyUploadComplete).Methods("POST")
+
+	adminProtected.HandleFunc("/uploads/pending", adminHandler.GetPendingUploads).Methods("GET")
+	adminProtected.HandleFunc("/approve-content", adminHandler.ApproveContent).Methods("POST")
+
+	// Admin Finance & Subscription Tracking
+	adminProtected.HandleFunc("/subscriptions", adminHandler.AdminListSubscriptions).Methods("GET")
+	adminProtected.HandleFunc("/payouts", adminHandler.AdminListPayouts).Methods("GET")
+	adminProtected.HandleFunc("/payouts/{id}/status", adminHandler.AdminUpdatePayoutStatus).Methods("PUT")
+	adminProtected.HandleFunc("/earnings", adminHandler.AdminListEarnings).Methods("GET")
+	adminProtected.HandleFunc("/revenue-summary", adminHandler.AdminGetRevenueSummary).Methods("GET")
 
 	// CORS configuration
 	c := cors.New(cors.Options{

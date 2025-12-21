@@ -1,11 +1,46 @@
 package models
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
+
+// JSONB is a custom type for PostgreSQL JSONB columns
+type JSONB map[string]interface{}
+
+// Scan implements the sql.Scanner interface for JSONB
+func (j *JSONB) Scan(value interface{}) error {
+	if value == nil {
+		*j = make(JSONB)
+		return nil
+	}
+
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("failed to unmarshal JSONB value: not a byte slice")
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		return err
+	}
+
+	*j = JSONB(result)
+	return nil
+}
+
+// Value implements the driver.Valuer interface for JSONB
+func (j JSONB) Value() (driver.Value, error) {
+	if j == nil {
+		return nil, nil
+	}
+	return json.Marshal(j)
+}
 
 // Series represents a video series
 type Series struct {
@@ -57,17 +92,17 @@ type Episode struct {
 
 // UploadRequest represents a request for upload URL
 type UploadRequest struct {
-	ID          string                 `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	UserID      string                 `json:"user_id" gorm:"type:uuid;not null"`
-	Filename    string                 `json:"filename" gorm:"not null"`
-	ContentType string                 `json:"content_type" gorm:"not null"`
-	SizeBytes   int64                  `json:"size_bytes" gorm:"not null"`
-	FileType    string                 `json:"file_type" gorm:"type:varchar(20);default:'video';check:file_type IN ('video', 'thumbnail', 'caption')"`
-	Metadata    map[string]interface{} `json:"metadata" gorm:"type:jsonb"`
-	Status      string                 `json:"status" gorm:"type:varchar(30);default:'pending';check:status IN ('pending', 'uploading', 'completed', 'failed')"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt         `json:"deleted_at,omitempty" gorm:"index"`
+	ID          string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	UserID      string         `json:"user_id" gorm:"type:uuid;not null"`
+	Filename    string         `json:"filename" gorm:"not null"`
+	ContentType string         `json:"content_type" gorm:"not null"`
+	SizeBytes   int64          `json:"size_bytes" gorm:"not null"`
+	FileType    string         `json:"file_type" gorm:"type:varchar(20);default:'video';check:file_type IN ('video', 'thumbnail', 'caption')"`
+	Metadata    JSONB          `json:"metadata" gorm:"type:jsonb"`
+	Status      string         `json:"status" gorm:"type:varchar(30);default:'pending';check:status IN ('pending', 'uploading', 'completed', 'failed')"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relationships
 	User User `json:"user" gorm:"foreignKey:UserID"`

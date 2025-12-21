@@ -54,6 +54,19 @@ func (m *AuthMiddleware) AuthMiddleware(next http.Handler) http.Handler {
 		// Add user info to request context
 		ctx := context.WithValue(r.Context(), "user_id", claims.UserID)
 		ctx = context.WithValue(ctx, "phone", claims.Phone)
+		ctx = context.WithValue(ctx, "role", claims.Role)
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// AdminMiddleware enforces that the authenticated user has the 'admin' role
+func (m *AuthMiddleware) AdminMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		role, ok := r.Context().Value("role").(string)
+		if !ok || role != "admin" {
+			http.Error(w, "Forbidden: Admin privileges required", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }

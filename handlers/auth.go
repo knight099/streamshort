@@ -14,6 +14,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -40,6 +41,16 @@ type PhoneOtpSendResponse struct {
 type PhoneOtpVerifyRequest struct {
 	Phone string `json:"phone"`
 	OTP   string `json:"otp"`
+}
+
+type AdminLoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type CreateAdminRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type TokenResponse struct {
@@ -356,7 +367,8 @@ type FirebaseExchangeRequest struct {
 // JWT Claims
 type Claims struct {
 	UserID string `json:"user_id"`
-	Phone  string `json:"phone"`
+	Phone  string `json:"phone,omitempty"`
+	Role   string `json:"role"`
 	Name   string `json:"name,omitempty"`
 	jwt.RegisteredClaims
 }
@@ -516,11 +528,119 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// AdminLogin handles username/password login for admins
+func (h *AuthHandler) AdminLogin(w http.ResponseWriter, r *http.Request) {
+	var req AdminLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Username == "" || req.Password == "" {
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		return
+	}
+
+	var user models.User
+	if err := h.db.Where("username = ? AND role = 'admin'", req.Username).First(&user).Error; err != nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	// Generate tokens
+	accessToken, err := h.generateAccessToken(user)
+	if err != nil {
+		http.Error(w, "Failed to generate access token", http.StatusInternalServerError)
+		return
+	}
+
+	refreshToken, err := h.generateRefreshToken(user.ID)
+	if err != nil {
+		http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
+		return
+	}
+
+	response := TokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    int(TokenExpiration.Seconds()),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// EnsureDefaultAdmin checks if any admin exists, if not creates one
+func (h *AuthHandler) EnsureDefaultAdmin() {
+	var count int64
+	h.db.Model(&models.User{}).Where("role = ?", "admin").Count(&count)
+	if count == 0 {
+		log.Println("[auth] No admin found. Creating default admin...")
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		admin := models.User{
+			Username:     "admin",
+			PasswordHash: string(hashedPassword),
+			Role:         "admin",
+			Name:         "Default Admin",
+		}
+		if err := h.db.Create(&admin).Error; err != nil {
+			log.Printf("[auth] Failed to create default admin: %v", err)
+		} else {
+			log.Println("[auth] Default admin created: username=admin, password=admin123")
+		}
+	}
+}
+
+// CreateAdmin creates a new admin user (Protected by Middleware in main)
+func (h *AuthHandler) CreateAdmin(w http.ResponseWriter, r *http.Request) {
+	var req CreateAdminRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Username == "" || req.Password == "" {
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Failed to process password", http.StatusInternalServerError)
+		return
+	}
+
+	user := models.User{
+		Username:     req.Username,
+		PasswordHash: string(hashedPassword),
+		Role:         "admin",
+	}
+
+	if err := h.db.Create(&user).Error; err != nil {
+		log.Printf("[auth] CreateAdmin: db error: %v", err)
+		http.Error(w, "Failed to create admin (username might be taken)", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Admin created successfully",
+		"user_id": user.ID,
+	})
+}
+
 // Helper functions
 func (h *AuthHandler) generateAccessToken(user models.User) (string, error) {
 	claims := Claims{
 		UserID: user.ID,
 		Phone:  user.Phone,
+		Role:   user.Role,
 		Name:   user.Name,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExpiration)),
