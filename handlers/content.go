@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -57,6 +58,7 @@ type UpdateSeriesRequest struct {
 
 type CreateEpisodeRequest struct {
 	Title           string  `json:"title"`
+	SeasonNumber    int     `json:"season_number"`
 	EpisodeNumber   int     `json:"episode_number"`
 	DurationSeconds int     `json:"duration_seconds"`
 	ThumbURL        *string `json:"thumb_url"`
@@ -82,6 +84,7 @@ type SeriesListItem struct {
 type EpisodeBrief struct {
 	ID              string     `json:"id"`
 	Title           string     `json:"title"`
+	SeasonNumber    int        `json:"season_number"`
 	EpisodeNumber   int        `json:"episode_number"`
 	DurationSeconds int        `json:"duration_seconds"`
 	ThumbURL        *string    `json:"thumb_url"`
@@ -399,7 +402,7 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 
 	var series models.Series
 	if err := h.db.Preload("Creator").Preload("Episodes", func(db *gorm.DB) *gorm.DB {
-		return db.Where("status = ?", "published").Order("episode_number")
+		return db.Where("status = ?", "published").Order("season_number, episode_number")
 	}).Where("id = ?", seriesID).First(&series).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			http.Error(w, "Series not found", http.StatusNotFound)
@@ -424,6 +427,8 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		CreatedAt     time.Time      `json:"created_at"`
 		UpdatedAt     time.Time      `json:"updated_at"`
 		Episodes      []EpisodeBrief `json:"episodes"`
+		Seasons       []int          `json:"seasons"`
+		TotalSeasons  int            `json:"total_seasons"`
 		FollowerCount int64          `json:"follower_count"`
 		Following     bool           `json:"following"`
 		ViewCount     int64          `json:"view_count"`
@@ -436,10 +441,13 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	eps := make([]EpisodeBrief, 0, len(series.Episodes))
+	seasonSet := make(map[int]bool)
 	for _, ep := range series.Episodes {
+		seasonSet[ep.SeasonNumber] = true
 		eps = append(eps, EpisodeBrief{
 			ID:              ep.ID,
 			Title:           ep.Title,
+			SeasonNumber:    ep.SeasonNumber,
 			EpisodeNumber:   ep.EpisodeNumber,
 			DurationSeconds: ep.DurationSeconds,
 			ThumbURL:        ep.ThumbURL,
@@ -449,6 +457,13 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 			LikeCount:       ep.LikeCount,
 		})
 	}
+
+	// Build sorted seasons list
+	seasons := make([]int, 0, len(seasonSet))
+	for s := range seasonSet {
+		seasons = append(seasons, s)
+	}
+	sort.Ints(seasons)
 
 	// follower count
 	var followerCount int64
@@ -498,6 +513,8 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:     series.CreatedAt,
 		UpdatedAt:     series.UpdatedAt,
 		Episodes:      eps,
+		Seasons:       seasons,
+		TotalSeasons:  len(seasons),
 		FollowerCount: followerCount,
 		Following:     following,
 		ViewCount:     viewCount,
@@ -624,10 +641,14 @@ func (h *ContentHandler) CreateEpisode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if episode number already exists
+	// Check if episode number already exists for this season
 	var existingEpisode models.Episode
-	if err := h.db.Where("series_id = ? AND episode_number = ?", seriesID, req.EpisodeNumber).First(&existingEpisode).Error; err == nil {
-		http.Error(w, "Episode number already exists for this series", http.StatusConflict)
+	seasonNum := req.SeasonNumber
+	if seasonNum <= 0 {
+		seasonNum = 1 // Default to season 1
+	}
+	if err := h.db.Where("series_id = ? AND season_number = ? AND episode_number = ?", seriesID, seasonNum, req.EpisodeNumber).First(&existingEpisode).Error; err == nil {
+		http.Error(w, "Episode number already exists for this season", http.StatusConflict)
 		return
 	}
 
@@ -635,6 +656,7 @@ func (h *ContentHandler) CreateEpisode(w http.ResponseWriter, r *http.Request) {
 	episode := models.Episode{
 		SeriesID:        seriesID,
 		Title:           req.Title,
+		SeasonNumber:    seasonNum,
 		EpisodeNumber:   req.EpisodeNumber,
 		DurationSeconds: req.DurationSeconds,
 		ThumbURL:        req.ThumbURL,
@@ -1511,6 +1533,15 @@ func (h *ContentHandler) GetEpisodes(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	seriesID := vars["seriesId"]
 
+	// Optional season filter
+	seasonStr := r.URL.Query().Get("season")
+	var seasonFilter *int
+	if seasonStr != "" {
+		if s, err := strconv.Atoi(seasonStr); err == nil && s > 0 {
+			seasonFilter = &s
+		}
+	}
+
 	// Check if series exists and is published
 	var series models.Series
 	if err := h.db.Where("id = ? AND status = ?", seriesID, "published").First(&series).Error; err != nil {
@@ -1522,11 +1553,13 @@ func (h *ContentHandler) GetEpisodes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get all published episodes for this series
+	// Get all published episodes for this series (with optional season filter)
 	var episodes []models.Episode
-	if err := h.db.Where("series_id = ? AND status = ?", seriesID, "published").
-		Order("episode_number").
-		Find(&episodes).Error; err != nil {
+	query := h.db.Where("series_id = ? AND status = ?", seriesID, "published")
+	if seasonFilter != nil {
+		query = query.Where("season_number = ?", *seasonFilter)
+	}
+	if err := query.Order("season_number, episode_number").Find(&episodes).Error; err != nil {
 		http.Error(w, "Failed to fetch episodes", http.StatusInternalServerError)
 		return
 	}
@@ -1535,6 +1568,7 @@ func (h *ContentHandler) GetEpisodes(w http.ResponseWriter, r *http.Request) {
 	type EpisodeResponse struct {
 		ID              string     `json:"id"`
 		Title           string     `json:"title"`
+		SeasonNumber    int        `json:"season_number"`
 		EpisodeNumber   int        `json:"episode_number"`
 		DurationSeconds int        `json:"duration_seconds"`
 		ThumbURL        *string    `json:"thumb_url"`
@@ -1547,6 +1581,7 @@ func (h *ContentHandler) GetEpisodes(w http.ResponseWriter, r *http.Request) {
 		episodeResponses = append(episodeResponses, EpisodeResponse{
 			ID:              ep.ID,
 			Title:           ep.Title,
+			SeasonNumber:    ep.SeasonNumber,
 			EpisodeNumber:   ep.EpisodeNumber,
 			DurationSeconds: ep.DurationSeconds,
 			ThumbURL:        ep.ThumbURL,
@@ -1559,6 +1594,9 @@ func (h *ContentHandler) GetEpisodes(w http.ResponseWriter, r *http.Request) {
 		"series_id": seriesID,
 		"episodes":  episodeResponses,
 		"total":     len(episodeResponses),
+	}
+	if seasonFilter != nil {
+		response["season_number"] = *seasonFilter
 	}
 
 	w.Header().Set("Content-Type", "application/json")

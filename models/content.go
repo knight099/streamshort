@@ -70,6 +70,7 @@ type Episode struct {
 	ID              string         `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	SeriesID        string         `json:"series_id" gorm:"type:uuid;not null;index"`
 	Title           string         `json:"title" gorm:"not null"`
+	SeasonNumber    int            `json:"season_number" gorm:"not null;default:1"`
 	EpisodeNumber   int            `json:"episode_number" gorm:"not null"`
 	DurationSeconds int            `json:"duration_seconds" gorm:"not null"`
 	S3MasterPath    *string        `json:"s3_master_path"`
