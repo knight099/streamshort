@@ -217,10 +217,24 @@ func main() {
 	adminProtected.HandleFunc("/kyc/{id}/verify", adminHandler.AdminVerifyKYC).Methods("POST")
 
 	// CORS configuration
+	allowedOrigins := strings.Split(cfg.CORSAllowedOrigins, ",")
+	allowedOriginsMap := make(map[string]bool)
+	for _, origin := range allowedOrigins {
+		origin = strings.TrimSpace(origin)
+		if origin != "" {
+			allowedOriginsMap[origin] = true
+		}
+	}
+
 	c := cors.New(cors.Options{
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"*"},
 		AllowOriginFunc: func(origin string) bool {
+			// Check exact match first
+			if allowedOriginsMap[origin] {
+				return true
+			}
+			// Fallback: allow all localhost/127.0.0.1 for development
 			return strings.HasPrefix(origin, "http://localhost:") ||
 				strings.HasPrefix(origin, "https://localhost:") ||
 				strings.HasPrefix(origin, "http://127.0.0.1:") ||

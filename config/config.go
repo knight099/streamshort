@@ -33,6 +33,9 @@ type Config struct {
 	// Razorpay Configuration
 	RazorpayKeyID     string
 	RazorpayKeySecret string
+
+	// CORS Configuration
+	CORSAllowedOrigins string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -72,6 +75,9 @@ func LoadConfig() *Config {
 		// Razorpay Configuration
 		RazorpayKeyID:     getEnv("RAZORPAY_KEY_ID", ""),
 		RazorpayKeySecret: getEnv("RAZORPAY_KEY_SECRET", ""),
+
+		// CORS Configuration (comma-separated origins)
+		CORSAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080"),
 	}
 
 	// Parse earnings RPM (INR per 1000 watch-minutes). Default 100.0 (₹100 per 1000 min)
