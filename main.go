@@ -94,10 +94,11 @@ func main() {
 	}).Methods("GET")
 
 	// Public content routes (no authentication required)
+	// IMPORTANT: Specific routes must come BEFORE parameterized routes in Gorilla Mux
 	r.HandleFunc("/content/series", contentHandler.ListSeries).Methods("GET")
+	r.HandleFunc("/content/series/search", contentHandler.SearchSeries).Methods("GET")
 	r.HandleFunc("/content/series/{id}", contentHandler.GetSeries).Methods("GET")
 	r.HandleFunc("/content/series/{seriesId}/episodes", contentHandler.GetEpisodes).Methods("GET")
-	r.HandleFunc("/content/series/search", contentHandler.SearchSeries).Methods("GET")
 
 	// Public payment webhooks (no authentication required)
 	r.HandleFunc("/payments/webhook", paymentHandler.Webhook).Methods("POST")
