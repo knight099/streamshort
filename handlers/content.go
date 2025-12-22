@@ -335,15 +335,27 @@ func (h *ContentHandler) SearchSeries(w http.ResponseWriter, r *http.Request) {
 	var response SeriesListResponse
 	var seriesRows []models.Series
 	like := "%" + q + "%"
-	query := h.db.Model(&models.Series{}).
+
+	// Build base query conditions
+	baseQuery := h.db.Model(&models.Series{}).
 		Where("status = ?", "published").
 		Where("title ILIKE ? OR synopsis ILIKE ?", like, like)
+
+	// Count total (use separate query to avoid GORM state mutation)
 	var total int64
-	if err := query.Count(&total).Error; err != nil {
+	if err := baseQuery.Count(&total).Error; err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
-	if err := query.Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&seriesRows).Error; err != nil {
+
+	// Fetch paginated results (fresh query to avoid Count side effects)
+	if err := h.db.Model(&models.Series{}).
+		Where("status = ?", "published").
+		Where("title ILIKE ? OR synopsis ILIKE ?", like, like).
+		Order("created_at DESC").
+		Offset((page - 1) * limit).
+		Limit(limit).
+		Find(&seriesRows).Error; err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
