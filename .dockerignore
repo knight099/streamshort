@@ -1,0 +1,66 @@
+# Version control
+.git
+.gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts and binaries
+server
+streamshort
+streamshort-server
+streamshort-test
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Logs
+*.log
+server.log
+
+# Test files and scripts
+*_test.go
+test_*.sh
+*_test.sh
+
+# Documentation files
+*.md
+!README.md
+
+# Configuration files not needed in container
+render.yaml
+openapi-streamshort.yaml
+
+# Kiro specs and development files
+.kiro/
+.cursor/
+
+# Scripts directory (development scripts)
+scripts/
+
+# GitHub workflows (not needed in container)
+.github/
+
+# Temporary files
+tmp/
+temp/

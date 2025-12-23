@@ -217,6 +217,9 @@ func main() {
 	adminProtected.HandleFunc("/kyc", adminHandler.AdminListPendingKYC).Methods("GET")
 	adminProtected.HandleFunc("/kyc/{id}/verify", adminHandler.AdminVerifyKYC).Methods("POST")
 
+	// Admin Episodes Management
+	adminProtected.HandleFunc("/content/series/{id}/episodes", adminHandler.AdminGetEpisodes).Methods("GET")
+
 	// CORS configuration
 	allowedOrigins := strings.Split(cfg.CORSAllowedOrigins, ",")
 	allowedOriginsMap := make(map[string]bool)
@@ -291,6 +294,7 @@ func main() {
 	log.Println("  POST /api/episodes/{id}/comments - Comment on episode (requires auth)")
 	log.Println("  GET  /api/admin/uploads/pending - List pending uploads (admin only)")
 	log.Println("  POST /api/admin/approve-content - Approve/reject content (admin only)")
+	log.Println("  GET  /api/admin/content/series/{id}/episodes - Get episodes for series (admin only)")
 	log.Println("  GET  /content/series            - List series (public)")
 	log.Println("  GET  /content/series/{id}       - Get series details (public)")
 	log.Println("  GET  /content/series/{seriesId}/episodes - Get episodes for series (public)")

@@ -3,3 +3,7 @@
 .env.local
 
 server.log
+
+.kiro
+.cursor
+.vscode

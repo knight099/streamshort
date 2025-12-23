@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -986,4 +987,95 @@ func (h *AdminHandler) AdminVerifyKYC(w http.ResponseWriter, r *http.Request) {
 		"creator_id": creatorID,
 		"kyc_status": newStatus,
 	})
+}
+
+// AdminGetEpisodes fetches all episodes for a specific series (admin can see all statuses)
+func (h *AdminHandler) AdminGetEpisodes(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	seriesID := vars["id"]
+
+	// Optional filters
+	seasonStr := r.URL.Query().Get("season")
+	status := r.URL.Query().Get("status") // published, draft, pending, etc.
+
+	var seasonFilter *int
+	if seasonStr != "" {
+		if s, err := strconv.Atoi(seasonStr); err == nil && s > 0 {
+			seasonFilter = &s
+		}
+	}
+
+	// Check if series exists (admin can see any series regardless of status)
+	var series models.Series
+	if err := h.db.First(&series, "id = ?", seriesID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Series not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Get episodes for this series with optional filters
+	query := h.db.Where("series_id = ?", seriesID)
+	if seasonFilter != nil {
+		query = query.Where("season_number = ?", *seasonFilter)
+	}
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	var episodes []models.Episode
+	if err := query.Order("season_number, episode_number").Find(&episodes).Error; err != nil {
+		http.Error(w, "Failed to fetch episodes", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to response format with admin-specific fields
+	type AdminEpisodeResponse struct {
+		ID              string     `json:"id"`
+		Title           string     `json:"title"`
+		SeasonNumber    int        `json:"season_number"`
+		EpisodeNumber   int        `json:"episode_number"`
+		DurationSeconds int        `json:"duration_seconds"`
+		ThumbURL        *string    `json:"thumb_url"`
+		Status          string     `json:"status"`
+		S3MasterPath    *string    `json:"s3_master_path"`
+		PublishedAt     *time.Time `json:"published_at"`
+		CreatedAt       time.Time  `json:"created_at"`
+		UpdatedAt       time.Time  `json:"updated_at"`
+	}
+
+	episodeResponses := make([]AdminEpisodeResponse, 0, len(episodes))
+	for _, ep := range episodes {
+		episodeResponses = append(episodeResponses, AdminEpisodeResponse{
+			ID:              ep.ID,
+			Title:           ep.Title,
+			SeasonNumber:    ep.SeasonNumber,
+			EpisodeNumber:   ep.EpisodeNumber,
+			DurationSeconds: ep.DurationSeconds,
+			ThumbURL:        ep.ThumbURL,
+			Status:          ep.Status,
+			S3MasterPath:    ep.S3MasterPath,
+			PublishedAt:     ep.PublishedAt,
+			CreatedAt:       ep.CreatedAt,
+			UpdatedAt:       ep.UpdatedAt,
+		})
+	}
+
+	response := map[string]interface{}{
+		"series_id":    seriesID,
+		"series_title": series.Title,
+		"episodes":     episodeResponses,
+		"total":        len(episodeResponses),
+	}
+	if seasonFilter != nil {
+		response["season_number"] = *seasonFilter
+	}
+	if status != "" {
+		response["status_filter"] = status
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }

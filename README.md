@@ -1,4 +1,27 @@
-# streamshort
+# StreamShort
+
+[![Deploy to AWS](https://github.com/YOUR_USERNAME/streamshort/actions/workflows/deploy.yml/badge.svg)](https://github.com/YOUR_USERNAME/streamshort/actions/workflows/deploy.yml)
+
+A Go-based backend service for short-form video streaming with creator monetization.
+
+## Deployment
+
+This application is automatically deployed to AWS App Runner using GitHub Actions. Every push to the `main` branch triggers a complete CI/CD pipeline that builds, tests, and deploys the application.
+
+### Quick Start
+
+1. **Fork this repository**
+2. **Set up AWS infrastructure** - Follow the [AWS Deployment Guide](./AWS_DEPLOYMENT.md)
+3. **Configure GitHub secrets** - Add required AWS credentials to your repository
+4. **Push to main branch** - Deployment happens automatically
+
+### Deployment Status
+
+- **Production**: Deployed automatically from `main` branch
+- **Health Check**: Available at `/health` endpoint
+- **Monitoring**: AWS App Runner provides built-in monitoring and auto-scaling
+
+For detailed setup instructions, troubleshooting, and configuration options, see the [AWS Deployment Guide](./AWS_DEPLOYMENT.md).
 
 
 ### Todo
