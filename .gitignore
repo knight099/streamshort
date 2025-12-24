@@ -7,3 +7,21 @@ server.log
 .kiro
 .cursor
 .vscode
+# AWS deployment files (temporary/test)
+*-test.json
+*-minimal*.json
+*-simple.json
+*-fixed.json
+*-no-migrations.json
+*permissions-policy.json
+cloudwatch-logs-policy.json
+check-*.sh
+test-*.sh
+*.patch
+apprunner.yaml
+
+# Build artifacts
+streamshort
+streamshort-server
+streamshort-test
+server

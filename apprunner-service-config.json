@@ -1,0 +1,50 @@
+{
+  "ServiceName": "streamshort-service",
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "462977978299.dkr.ecr.ap-south-1.amazonaws.com/streamshort:latest",
+      "ImageConfiguration": {
+        "Port": "8080",
+        "RuntimeEnvironmentVariables": {
+          "PORT": "8080",
+          "DATABASE_URL": "postgresql://neondb_owner:npg_ca10rQTZsBoV@ep-noisy-tree-a8tsfxu0-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require",
+          "JWT_SECRET": "streamshort",
+          "JWT_ACCESS_EXPIRY": "15m",
+          "JWT_REFRESH_EXPIRY": "720h",
+          "SKIP_MIGRATIONS": "false",
+          "FIREBASE_API_KEY": "AIzaSyC7qMtWKwzyPC07ToQGL2cGfLEf3q3l3Tw",
+          "FIREBASE_PROJECT_ID": "streamshort-49ffe",
+          "RECAPTCHA_SITE_KEY": "6Lct4MwrAAAAAPwBxxtrfaSwNQ4o4DgMLrtvwJ1o",
+          "CORS_ALLOWED_ORIGINS": "http://localhost:3000, http://localhost:51284, http://localhost:8081, https://streamshortadmin.vercel.app/, https://admin.streamshort.in",
+          "RAZORPAY_KEY_ID": "rzp_test_RpciSJb0IiwFgQ",
+          "RAZORPAY_KEY_SECRET": "PeLIUzX5PWh37ftFvjE9ssDM",
+          "RAZORPAY_WEBHOOK_SECRET": "streamshort-razorpay",
+          "AWS_REGION": "ap-south-1",
+          "AWS_ACCESS_KEY_ID": "AKIAWXS5DJ65RY3KLZ6A",
+          "AWS_SECRET_ACCESS_KEY": "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",
+          "AWS_S3_BUCKET": "streamshort-media",
+          "AWS_CLOUDFRONT_DOMAIN": "djoxr6aauqbf6.cloudfront.net",
+          "AWS_CLOUDFRONT_DISTRIBUTION_ID": "E35XJJN19W7KFF",
+          "AWS_CLOUDFRONT_KEY_PAIR_ID": "K22WDLQZV9U4XV"
+        }
+      },
+      "ImageRepositoryType": "ECR"
+    },
+    "AutoDeploymentsEnabled": true,
+    "AuthenticationConfiguration": {
+      "AccessRoleArn": "arn:aws:iam::462977978299:role/AppRunnerECRAccessRole"
+    }
+  },
+  "InstanceConfiguration": {
+    "Cpu": "0.25 vCPU",
+    "Memory": "0.5 GB"
+  },
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP",
+    "Path": "/health",
+    "Interval": 10,
+    "Timeout": 5,
+    "HealthyThreshold": 1,
+    "UnhealthyThreshold": 5
+  }
+}
