@@ -488,6 +488,65 @@ func (h *CreatorPaymentHandler) GetPayoutHistory(w http.ResponseWriter, r *http.
 	json.NewEncoder(w).Encode(response)
 }
 
+// GetPayoutDetails returns payout/bank account details for a creator
+// GET /api/creators/{creator_id}/payout-details
+func (h *CreatorPaymentHandler) GetPayoutDetails(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	creatorID := vars["creator_id"]
+
+	// Get user ID from context
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	// Verify the creator belongs to this user
+	var creator models.CreatorProfile
+	if err := h.db.Where("id = ? AND user_id = ?", creatorID, userID).First(&creator).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Creator not found or access denied", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Get payout details
+	var payoutDetails models.PayoutDetails
+	if err := h.db.Where("creator_id = ?", creatorID).First(&payoutDetails).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// Return empty payout details with creator info
+			response := models.PayoutDetailsResponse{
+				CreatorID:     creatorID,
+				PayoutDetails: models.PayoutDetailsInfo{},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	response := models.PayoutDetailsResponse{
+		CreatorID: creatorID,
+		PayoutDetails: models.PayoutDetailsInfo{
+			AccountHolderName: payoutDetails.AccountHolder,
+			AccountNumber:     payoutDetails.AccountNumber,
+			IFSCCode:          payoutDetails.IFSCCode,
+			BankName:          payoutDetails.BankName,
+			AccountType:       payoutDetails.AccountType,
+			UPIID:             payoutDetails.UPIID,
+			Verified:          payoutDetails.Verified,
+			UpdatedAt:         payoutDetails.UpdatedAt,
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // UpdatePayoutDetails updates payout/bank account details for a creator
 // PUT /api/creators/{creator_id}/payout-details
 func (h *CreatorPaymentHandler) UpdatePayoutDetails(w http.ResponseWriter, r *http.Request) {

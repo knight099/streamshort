@@ -147,6 +147,7 @@ func main() {
 	protected.HandleFunc("/creators/{creator_id}/earnings/breakdown", creatorPaymentHandler.GetEarningsBreakdown).Methods("GET")
 	protected.HandleFunc("/creators/{creator_id}/payouts", creatorPaymentHandler.GetPayoutHistory).Methods("GET")
 	protected.HandleFunc("/creators/{creator_id}/payouts/request", creatorPaymentHandler.RequestPayout).Methods("POST")
+	protected.HandleFunc("/creators/{creator_id}/payout-details", creatorPaymentHandler.GetPayoutDetails).Methods("GET")
 	protected.HandleFunc("/creators/{creator_id}/payout-details", creatorPaymentHandler.UpdatePayoutDetails).Methods("PUT")
 
 	// Series view tracking
