@@ -52,18 +52,47 @@ func InitDB() *gorm.DB {
 			dbURL += "?search_path=public"
 		}
 	}
+	// Disable statement cache to prevent "prepared statement name is already in use" errors
+	// This is critical for serverless PostgreSQL like Neon with connection pooling
+	if !strings.Contains(lower, "statement_cache_capacity") {
+		if strings.Contains(dbURL, "?") {
+			dbURL += "&statement_cache_capacity=0"
+		} else {
+			dbURL += "?statement_cache_capacity=0"
+		}
+	}
 
-	// Configure GORM
+	// Configure GORM with PrepareStmt disabled to avoid prepared statement caching issues
 	config := &gorm.Config{
 		// Disable SQL logging (set to Error or Silent to avoid query logs)
 		Logger:                                   logger.Default.LogMode(logger.Error),
 		DisableForeignKeyConstraintWhenMigrating: true,
+		// Disable prepared statement caching to prevent connection pool conflicts
+		PrepareStmt: false,
 	}
 
 	// Connect to database
 	db, err := gorm.Open(postgres.Open(dbURL), config)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
+	}
+
+	// Configure connection pool settings for Neon's serverless PostgreSQL
+	// This prevents connection exhaustion and prepared statement conflicts
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Printf("Warning: failed to get underlying sql.DB: %v", err)
+	} else {
+		// Set maximum number of open connections (Neon free tier allows ~20 concurrent)
+		sqlDB.SetMaxOpenConns(25)
+		// Set maximum number of idle connections
+		sqlDB.SetMaxIdleConns(5)
+		// Set maximum lifetime for connections (5 minutes)
+		// This helps recycle connections and prevents stale connection issues
+		sqlDB.SetConnMaxLifetime(5 * time.Minute)
+		// Set maximum idle time for connections
+		sqlDB.SetConnMaxIdleTime(1 * time.Minute)
+		log.Println("Database connection pool configured: MaxOpenConns=25, MaxIdleConns=5, ConnMaxLifetime=5m")
 	}
 
 	// Ensure required extensions exist
