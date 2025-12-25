@@ -223,7 +223,8 @@ func (h *SocialHandler) RateSeries(w http.ResponseWriter, r *http.Request) {
 	// Upsert rating: update if exists, create if not
 	var existingRating models.SeriesRating
 	err := h.db.Where("user_id = ? AND series_id = ?", userID, seriesID).First(&existingRating).Error
-	if err == gorm.ErrRecordNotFound {
+	switch err {
+	case gorm.ErrRecordNotFound:
 		// Create new rating
 		rating := models.SeriesRating{
 			UserID:   userID,
@@ -234,13 +235,13 @@ func (h *SocialHandler) RateSeries(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to create rating", http.StatusInternalServerError)
 			return
 		}
-	} else if err == nil {
+	case nil:
 		// Update existing rating
 		if err := h.db.Model(&existingRating).Update("score", req.Rating).Error; err != nil {
 			http.Error(w, "Failed to update rating", http.StatusInternalServerError)
 			return
 		}
-	} else {
+	default:
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}

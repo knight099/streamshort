@@ -113,9 +113,11 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 	totalCount := 1 // For one-time payment, set to 1. For recurring, set appropriate count
 	if req.AutoRenew {
 		// For monthly: 12, yearly: 1, etc. Adjust based on your plan
-		if planDuration == 30 {
+		// For monthly: 12, yearly: 1, etc. Adjust based on your plan
+		switch planDuration {
+		case 30:
 			totalCount = 12 // Monthly plan, 12 months
-		} else if planDuration == 365 {
+		case 365:
 			totalCount = 1 // Yearly plan, 1 payment
 		}
 	}

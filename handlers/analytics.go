@@ -148,7 +148,7 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 
 	// Calculate real-time earnings asynchronously using goroutine
 	// This runs concurrently and doesn't block the response
-	go h.calculateRealtimeEarnings(userID, info.CreatorID, firstOfMonth)
+	go h.calculateRealtimeEarnings(info.CreatorID, firstOfMonth)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(WatchResponse{
@@ -161,7 +161,7 @@ func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 // calculateRealtimeEarnings calculates and updates creator earnings based on
 // ALL subscribers' proportional watch time distribution.
 // This runs asynchronously in a goroutine.
-func (h *AnalyticsHandler) calculateRealtimeEarnings(userID, creatorID string, monthDate time.Time) {
+func (h *AnalyticsHandler) calculateRealtimeEarnings(creatorID string, monthDate time.Time) {
 	// Calculate total earnings for this creator from ALL subscribers
 	// Formula: For each subscriber, (creator_watch_time / user_total_watch_time) * user_distributable
 	// Then sum across all subscribers
