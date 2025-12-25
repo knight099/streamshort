@@ -55,6 +55,31 @@ func (h *CreatorPaymentHandler) GetCreatorEarnings(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// Add creator details to the summary
+	summary.CreatorDetails = &models.CreatorDetails{
+		ID:            creator.ID,
+		DisplayName:   creator.DisplayName,
+		Bio:           creator.Bio,
+		KYCStatus:     creator.KYCStatus,
+		FollowerCount: creator.FollowerCount,
+		Rating:        creator.Rating,
+	}
+
+	// Add payout details if available
+	var payoutDetails models.PayoutDetails
+	if err := h.db.Where("creator_id = ?", creatorID).First(&payoutDetails).Error; err == nil {
+		summary.PayoutDetails = &models.PayoutDetailsInfo{
+			AccountHolderName: payoutDetails.AccountHolder,
+			AccountNumber:     payoutDetails.AccountNumber,
+			IFSCCode:          payoutDetails.IFSCCode,
+			BankName:          payoutDetails.BankName,
+			AccountType:       payoutDetails.AccountType,
+			UPIID:             payoutDetails.UPIID,
+			Verified:          payoutDetails.Verified,
+			UpdatedAt:         payoutDetails.UpdatedAt,
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(summary)
 }

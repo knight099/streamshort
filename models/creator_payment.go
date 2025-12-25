@@ -101,19 +101,31 @@ const (
 	MinimumPayoutThreshold = 500.0 // ₹500 minimum payout
 )
 
+// CreatorDetails represents basic creator profile information
+type CreatorDetails struct {
+	ID            string   `json:"id"`
+	DisplayName   string   `json:"display_name"`
+	Bio           string   `json:"bio,omitempty"`
+	KYCStatus     string   `json:"kyc_status"`
+	FollowerCount int64    `json:"follower_count"`
+	Rating        *float64 `json:"rating,omitempty"`
+}
+
 // EarningsSummary represents the summary of a creator's earnings
 type EarningsSummary struct {
-	CreatorID          string            `json:"creator_id"`
-	TotalEarnings      float64           `json:"total_earnings"`
-	PendingEarnings    float64           `json:"pending_earnings"`
-	PaidEarnings       float64           `json:"paid_earnings"`
-	AvailableForPayout float64           `json:"available_for_payout"`
-	MinimumThreshold   float64           `json:"minimum_threshold"`
-	CanRequestPayout   bool              `json:"can_request_payout"`
-	Breakdown          EarningsBreakdown `json:"breakdown"`
-	Currency           string            `json:"currency"`
-	LastPayoutDate     *time.Time        `json:"last_payout_date"`
-	NextPayoutDate     *time.Time        `json:"next_payout_date"`
+	CreatorID          string             `json:"creator_id"`
+	CreatorDetails     *CreatorDetails    `json:"creator_details,omitempty"`
+	PayoutDetails      *PayoutDetailsInfo `json:"payout_details,omitempty"`
+	TotalEarnings      float64            `json:"total_earnings"`
+	PendingEarnings    float64            `json:"pending_earnings"`
+	PaidEarnings       float64            `json:"paid_earnings"`
+	AvailableForPayout float64            `json:"available_for_payout"`
+	MinimumThreshold   float64            `json:"minimum_threshold"`
+	CanRequestPayout   bool               `json:"can_request_payout"`
+	Breakdown          EarningsBreakdown  `json:"breakdown"`
+	Currency           string             `json:"currency"`
+	LastPayoutDate     *time.Time         `json:"last_payout_date"`
+	NextPayoutDate     *time.Time         `json:"next_payout_date"`
 }
 
 // EarningsBreakdown represents the breakdown of earnings by type
