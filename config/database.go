@@ -9,6 +9,8 @@ import (
 
 	"streamshort/models"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -38,13 +40,6 @@ func InitDB() *gorm.DB {
 
 	// Ensure DSN has Neon-friendly flags
 	lower := strings.ToLower(dbURL)
-	if !strings.Contains(lower, "prefer_simple_protocol") {
-		if strings.Contains(dbURL, "?") {
-			dbURL += "&prefer_simple_protocol=true"
-		} else {
-			dbURL += "?prefer_simple_protocol=true"
-		}
-	}
 	if !strings.Contains(lower, "search_path=") {
 		if strings.Contains(dbURL, "?") {
 			dbURL += "&search_path=public"
@@ -52,18 +47,23 @@ func InitDB() *gorm.DB {
 			dbURL += "?search_path=public"
 		}
 	}
-	// Disable statement cache to prevent "prepared statement name is already in use" errors
-	// This is critical for serverless PostgreSQL like Neon with connection pooling
-	if !strings.Contains(lower, "statement_cache_capacity") {
-		if strings.Contains(dbURL, "?") {
-			dbURL += "&statement_cache_capacity=0"
-		} else {
-			dbURL += "?statement_cache_capacity=0"
-		}
+
+	// Parse pgx config from database URL
+	pgxConfig, err := pgx.ParseConfig(dbURL)
+	if err != nil {
+		log.Fatal("Failed to parse database URL:", err)
 	}
 
+	// CRITICAL: Disable prepared statement caching to prevent
+	// "prepared statement name is already in use" errors with Neon's connection pooler
+	// Neon uses PgBouncer in transaction mode which doesn't support prepared statements
+	pgxConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+	// Register the pgx driver with stdlib
+	connStr := stdlib.RegisterConnConfig(pgxConfig)
+
 	// Configure GORM with PrepareStmt disabled to avoid prepared statement caching issues
-	config := &gorm.Config{
+	gormConfig := &gorm.Config{
 		// Disable SQL logging (set to Error or Silent to avoid query logs)
 		Logger:                                   logger.Default.LogMode(logger.Error),
 		DisableForeignKeyConstraintWhenMigrating: true,
@@ -71,11 +71,17 @@ func InitDB() *gorm.DB {
 		PrepareStmt: false,
 	}
 
-	// Connect to database
-	db, err := gorm.Open(postgres.Open(dbURL), config)
+	// Connect to database using the registered pgx config
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DriverName: "pgx",
+		Conn:       nil,
+		DSN:        connStr,
+	}), gormConfig)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
+
+	log.Println("Database connected with SimpleProtocol mode (prepared statements disabled)")
 
 	// Configure connection pool settings for Neon's serverless PostgreSQL
 	// This prevents connection exhaustion and prepared statement conflicts
@@ -84,15 +90,14 @@ func InitDB() *gorm.DB {
 		log.Printf("Warning: failed to get underlying sql.DB: %v", err)
 	} else {
 		// Set maximum number of open connections (Neon free tier allows ~20 concurrent)
-		sqlDB.SetMaxOpenConns(25)
-		// Set maximum number of idle connections
-		sqlDB.SetMaxIdleConns(5)
-		// Set maximum lifetime for connections (5 minutes)
-		// This helps recycle connections and prevents stale connection issues
-		sqlDB.SetConnMaxLifetime(5 * time.Minute)
+		sqlDB.SetMaxOpenConns(10)
+		// Set maximum number of idle connections (keep low for serverless)
+		sqlDB.SetMaxIdleConns(2)
+		// Set maximum lifetime for connections (shorter for serverless to recycle faster)
+		sqlDB.SetConnMaxLifetime(3 * time.Minute)
 		// Set maximum idle time for connections
-		sqlDB.SetConnMaxIdleTime(1 * time.Minute)
-		log.Println("Database connection pool configured: MaxOpenConns=25, MaxIdleConns=5, ConnMaxLifetime=5m")
+		sqlDB.SetConnMaxIdleTime(30 * time.Second)
+		log.Println("Database connection pool configured: MaxOpenConns=10, MaxIdleConns=2, ConnMaxLifetime=3m")
 	}
 
 	// Ensure required extensions exist
