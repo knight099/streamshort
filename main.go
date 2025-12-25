@@ -76,6 +76,7 @@ func main() {
 	analyticsHandler := handlers.NewAnalyticsHandler(svcs.DB)
 	adminHandler := handlers.NewAdminHandler(svcs.DB, awsService)
 	creatorPaymentHandler := handlers.NewCreatorPaymentHandler(svcs.DB, razorpayClient)
+	watchListHandler := handlers.NewWatchListHandler(svcs.DB)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware()
@@ -128,6 +129,10 @@ func main() {
 	protected.HandleFunc("/profile", userHandler.GetProfile).Methods("GET")
 	protected.HandleFunc("/profile", userHandler.UpdateProfile).Methods("PUT")
 	protected.HandleFunc("/me/watch-history", userHandler.GetWatchHistory).Methods("GET")
+	protected.HandleFunc("/me/watchlist", watchListHandler.GetWatchList).Methods("GET")
+	protected.HandleFunc("/me/watchlist", watchListHandler.AddToWatchList).Methods("POST")
+	protected.HandleFunc("/me/watchlist/{series_id}", watchListHandler.RemoveFromWatchList).Methods("DELETE")
+	protected.HandleFunc("/me/watchlist/{series_id}/status", watchListHandler.CheckWatchListStatus).Methods("GET")
 	protected.HandleFunc("/me/liked-episodes", socialHandler.GetLikedEpisodes).Methods("GET")
 
 	// Creator routes (protected)
@@ -308,6 +313,10 @@ func main() {
 	log.Println("  POST /api/creators/{id}/payouts/request  - Request payout (requires auth)")
 	log.Println("  PUT  /api/creators/{id}/payout-details   - Update payout details (requires auth)")
 	log.Println("  POST /api/series/{id}/view               - Track series view (requires auth)")
+	log.Println("  GET  /api/me/watchlist                   - Get watchlist (requires auth)")
+	log.Println("  POST /api/me/watchlist                   - Add to watchlist (requires auth)")
+	log.Println("  DELETE /api/me/watchlist/{series_id}     - Remove from watchlist (requires auth)")
+	log.Println("  GET  /api/me/watchlist/{series_id}/status - Check watchlist status (requires auth)")
 
 	// Bind to all interfaces (0.0.0.0) for deployment compatibility
 	addr := "0.0.0.0:" + port
