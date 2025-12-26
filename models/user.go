@@ -11,7 +11,7 @@ type User struct {
 	Phone        string         `json:"phone,omitempty" gorm:"index:idx_users_phone,unique"`
 	Name         string         `json:"name" gorm:"type:text"`
 	Role         string         `json:"role" gorm:"default:'user'"`                 // 'user' or 'admin'
-	Username     string         `json:"username,omitempty" gorm:"type:text;unique"` // Only for admins
+	Username     *string        `json:"username,omitempty" gorm:"type:text;unique"` // Only for admins (nullable to allow NULL for non-admins)
 	PasswordHash string         `json:"-" gorm:"type:text"`                         // Only for admins
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`

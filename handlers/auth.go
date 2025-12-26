@@ -582,9 +582,10 @@ func (h *AuthHandler) EnsureDefaultAdmin() {
 	if count == 0 {
 		log.Println("[auth] No admin found. Creating default admin...")
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		adminUsername := "admin"
 		admin := models.User{
 			Phone:        "admin_default_" + uuid.New().String(),
-			Username:     "admin",
+			Username:     &adminUsername,
 			PasswordHash: string(hashedPassword),
 			Role:         "admin",
 			Name:         "Default Admin",
@@ -627,9 +628,10 @@ func (h *AuthHandler) CreateAdmin(w http.ResponseWriter, r *http.Request) {
 	// Generate unique placeholder phone for admin accounts (avoids unique constraint issue)
 	adminPhone := "admin_" + uuid.New().String()
 
+	username := req.Username
 	user := models.User{
 		Phone:        adminPhone,
-		Username:     req.Username,
+		Username:     &username,
 		PasswordHash: string(hashedPassword),
 		Role:         "admin",
 		Name:         req.Username, // Use username as display name
