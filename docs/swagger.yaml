@@ -1,0 +1,467 @@
+basePath: /
+definitions:
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+  handlers.CreateSeriesRequest:
+    properties:
+      category_tags:
+        items:
+          type: string
+        type: array
+      language:
+        type: string
+      price_amount:
+        type: number
+      price_type:
+        type: string
+      synopsis:
+        type: string
+      thumbnail_url:
+        type: string
+      title:
+        type: string
+    type: object
+  handlers.EpisodeBrief:
+    properties:
+      created_at:
+        type: string
+      duration_seconds:
+        type: integer
+      episode_number:
+        type: integer
+      id:
+        type: string
+      like_count:
+        type: integer
+      published_at:
+        type: string
+      season_number:
+        type: integer
+      thumb_url:
+        type: string
+      title:
+        type: string
+      view_count:
+        type: integer
+    type: object
+  handlers.SeriesDetailResponse:
+    properties:
+      category_tags:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      creator_name:
+        type: string
+      episodes:
+        items:
+          $ref: '#/definitions/handlers.EpisodeBrief'
+        type: array
+      follower_count:
+        type: integer
+      following:
+        type: boolean
+      id:
+        type: string
+      language:
+        type: string
+      like_count:
+        type: integer
+      price_amount:
+        type: number
+      price_type:
+        type: string
+      seasons:
+        items:
+          type: integer
+        type: array
+      status:
+        type: string
+      synopsis:
+        type: string
+      thumbnail_url:
+        type: string
+      title:
+        type: string
+      total_seasons:
+        type: integer
+      updated_at:
+        type: string
+      view_count:
+        type: integer
+    type: object
+  handlers.SeriesListItem:
+    properties:
+      category_tags:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      creator_name:
+        type: string
+      episodes:
+        items:
+          $ref: '#/definitions/handlers.EpisodeBrief'
+        type: array
+      id:
+        type: string
+      language:
+        type: string
+      price_amount:
+        type: number
+      price_type:
+        type: string
+      status:
+        type: string
+      synopsis:
+        type: string
+      thumbnail_url:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  handlers.SeriesListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handlers.SeriesListItem'
+        type: array
+      total:
+        type: integer
+    type: object
+  models.CreatorProfile:
+    properties:
+      bio:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      display_name:
+        type: string
+      follower_count:
+        type: integer
+      id:
+        type: string
+      kyc_document_s3_path:
+        type: string
+      kyc_status:
+        type: string
+      payout_details:
+        $ref: '#/definitions/models.PayoutDetails'
+      rating:
+        type: number
+      series_count:
+        description: Derived fields (not stored)
+        type: integer
+      updated_at:
+        type: string
+      user:
+        allOf:
+        - $ref: '#/definitions/models.User'
+        description: Relationships
+      user_id:
+        type: string
+    type: object
+  models.Episode:
+    properties:
+      captions_url:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      duration_seconds:
+        type: integer
+      episode_number:
+        type: integer
+      hls_manifest_url:
+        type: string
+      id:
+        type: string
+      like_count:
+        type: integer
+      published_at:
+        type: string
+      s3_master_path:
+        type: string
+      season_number:
+        type: integer
+      series:
+        allOf:
+        - $ref: '#/definitions/models.Series'
+        description: Relationships
+      series_id:
+        type: string
+      status:
+        type: string
+      thumb_url:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      view_count:
+        type: integer
+    type: object
+  models.PayoutDetails:
+    properties:
+      account_holder:
+        type: string
+      account_number:
+        type: string
+      account_type:
+        type: string
+      bank_name:
+        type: string
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: string
+      ifsc_code:
+        type: string
+      razorpay_contact_id:
+        type: string
+      razorpay_fund_account_id:
+        type: string
+      updated_at:
+        type: string
+      upi_id:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  models.Series:
+    properties:
+      category_tags:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      creator:
+        allOf:
+        - $ref: '#/definitions/models.CreatorProfile'
+        description: Relationships
+      creator_id:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      episodes:
+        items:
+          $ref: '#/definitions/models.Episode'
+        type: array
+      id:
+        type: string
+      language:
+        type: string
+      price_amount:
+        type: number
+      price_type:
+        type: string
+      status:
+        type: string
+      synopsis:
+        type: string
+      thumbnail_url:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      view_count:
+        type: integer
+    type: object
+  models.User:
+    properties:
+      created_at:
+        type: string
+      creator_profile:
+        allOf:
+        - $ref: '#/definitions/models.CreatorProfile'
+        description: Relationships
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      role:
+        description: '''user'' or ''admin'''
+        type: string
+      updated_at:
+        type: string
+      username:
+        description: Only for admins (nullable to allow NULL for non-admins)
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API for StreamShort, a short-form video streaming platform.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: StreamShort API
+  version: "1.0"
+paths:
+  /content/series:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of series with optional filtering
+      parameters:
+      - description: Language filter
+        in: query
+        name: language
+        type: string
+      - description: Category filter
+        in: query
+        name: category
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SeriesListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: List series
+      tags:
+      - content
+    post:
+      consumes:
+      - application/json
+      description: Create a new series entry. Requires creator privileges.
+      parameters:
+      - description: Series creation request
+        in: body
+        name: series
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateSeriesRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Series'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Create a new series
+      tags:
+      - content
+  /content/series/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a series
+      parameters:
+      - description: Series ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SeriesDetailResponse'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get series details
+      tags:
+      - content
+  /content/series/search:
+    get:
+      consumes:
+      - application/json
+      description: Search for series by title or synopsis
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Results per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SeriesListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Search series
+      tags:
+      - content
+swagger: "2.0"

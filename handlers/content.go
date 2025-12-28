@@ -128,7 +128,42 @@ type ManifestResponse struct {
 	ExpiresAt   time.Time `json:"expires_at"`
 }
 
+type SeriesDetailResponse struct {
+	ID            string         `json:"id"`
+	CreatorID     string         `json:"creator_id"`
+	CreatorName   *string        `json:"creator_name"`
+	Title         string         `json:"title"`
+	Synopsis      string         `json:"synopsis"`
+	Language      string         `json:"language"`
+	CategoryTags  pq.StringArray `json:"category_tags"`
+	PriceType     string         `json:"price_type"`
+	PriceAmount   *float64       `json:"price_amount"`
+	ThumbnailURL  *string        `json:"thumbnail_url"`
+	Status        string         `json:"status"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	Episodes      []EpisodeBrief `json:"episodes"`
+	Seasons       []int          `json:"seasons"`
+	TotalSeasons  int            `json:"total_seasons"`
+	FollowerCount int64          `json:"follower_count"`
+	Following     bool           `json:"following"`
+	ViewCount     int64          `json:"view_count"`
+	LikeCount     int64          `json:"like_count"`
+}
+
 // CreateSeries creates a new series
+// CreateSeries godoc
+// @Summary Create a new series
+// @Description Create a new series entry. Requires creator privileges.
+// @Tags content
+// @Accept  json
+// @Produce  json
+// @Param   series  body     CreateSeriesRequest  true  "Series creation request"
+// @Success 201 {object} models.Series
+// @Failure 400 {string} string "Bad Request"
+// @Failure 403 {string} string "Forbidden"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /content/series [post]
 func (h *ContentHandler) CreateSeries(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
 	userID, ok := r.Context().Value("user_id").(string)
@@ -201,6 +236,19 @@ func (h *ContentHandler) CreateSeries(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListSeries lists series with optional filters
+// ListSeries godoc
+// @Summary List series
+// @Description Get a list of series with optional filtering
+// @Tags content
+// @Accept  json
+// @Produce  json
+// @Param   language     query    string     false        "Language filter"
+// @Param   category     query    string     false        "Category filter"
+// @Param   page         query    int        false        "Page number"
+// @Param   per_page     query    int        false        "Items per page"
+// @Success 200 {object} SeriesListResponse
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /content/series [get]
 func (h *ContentHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters
 	language := r.URL.Query().Get("language")
@@ -300,7 +348,19 @@ func (h *ContentHandler) ListSeries(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// SearchSeries provides text search across published series using Redis cache and Elasticsearch.
+// SearchSeries godoc
+// @Summary Search series
+// @Description Search for series by title or synopsis
+// @Tags content
+// @Accept  json
+// @Produce  json
+// @Param   q            query    string     true         "Search query"
+// @Param   page         query    int        false        "Page number"
+// @Param   limit        query    int        false        "Results per page"
+// @Success 200 {object} SeriesListResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /content/series/search [get]
 func (h *ContentHandler) SearchSeries(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	pageStr := r.URL.Query().Get("page")
@@ -395,7 +455,17 @@ func (h *ContentHandler) SearchSeries(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// GetSeries gets a specific series by ID
+// GetSeries godoc
+// @Summary Get series details
+// @Description Get detailed information about a series
+// @Tags content
+// @Accept  json
+// @Produce  json
+// @Param   id           path     string     true         "Series ID"
+// @Success 200 {object} SeriesDetailResponse
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /content/series/{id} [get]
 func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	seriesID := vars["id"]
@@ -410,29 +480,6 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
-	}
-
-	type SeriesDetailResponse struct {
-		ID            string         `json:"id"`
-		CreatorID     string         `json:"creator_id"`
-		CreatorName   *string        `json:"creator_name"`
-		Title         string         `json:"title"`
-		Synopsis      string         `json:"synopsis"`
-		Language      string         `json:"language"`
-		CategoryTags  pq.StringArray `json:"category_tags"`
-		PriceType     string         `json:"price_type"`
-		PriceAmount   *float64       `json:"price_amount"`
-		ThumbnailURL  *string        `json:"thumbnail_url"`
-		Status        string         `json:"status"`
-		CreatedAt     time.Time      `json:"created_at"`
-		UpdatedAt     time.Time      `json:"updated_at"`
-		Episodes      []EpisodeBrief `json:"episodes"`
-		Seasons       []int          `json:"seasons"`
-		TotalSeasons  int            `json:"total_seasons"`
-		FollowerCount int64          `json:"follower_count"`
-		Following     bool           `json:"following"`
-		ViewCount     int64          `json:"view_count"`
-		LikeCount     int64          `json:"like_count"`
 	}
 
 	var creatorName *string

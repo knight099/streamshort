@@ -1,3 +1,17 @@
+// @title StreamShort API
+// @version 1.0
+// @description API for StreamShort, a short-form video streaming platform.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /
 package main
 
 import (
@@ -10,9 +24,12 @@ import (
 	"streamshort/services"
 	"strings"
 
+	_ "streamshort/docs"
+
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type Response struct {
@@ -93,6 +110,9 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(Response{Message: "Server is running!"})
 	}).Methods("GET")
+
+	// Swagger documentation
+	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 
 	// Public content routes (no authentication required)
 	// IMPORTANT: Specific routes must come BEFORE parameterized routes in Gorilla Mux
