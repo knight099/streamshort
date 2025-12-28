@@ -8,6 +8,77 @@ definitions:
         description: Valid is true if Time is not NULL
         type: boolean
     type: object
+  handlers.AdminCreateSeriesRequest:
+    properties:
+      category_tags:
+        items:
+          type: string
+        type: array
+      creator_id:
+        type: string
+      language:
+        type: string
+      price_amount:
+        type: number
+      price_type:
+        type: string
+      synopsis:
+        type: string
+      thumbnail_url:
+        type: string
+      title:
+        type: string
+    type: object
+  handlers.AdminLoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handlers.ApproveContentRequest:
+    properties:
+      action:
+        description: '"approve" or "reject"'
+        type: string
+      notes:
+        description: Optional admin notes
+        type: string
+      reason:
+        description: Required if action is "reject"
+        type: string
+    type: object
+  handlers.ApproveContentResponse:
+    properties:
+      action:
+        type: string
+      admin_id:
+        type: string
+      processed_at:
+        type: string
+      status:
+        type: string
+    type: object
+  handlers.CreateAdminRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handlers.CreateEpisodeRequest:
+    properties:
+      duration_seconds:
+        type: integer
+      episode_number:
+        type: integer
+      season_number:
+        type: integer
+      thumb_url:
+        type: string
+      title:
+        type: string
+    type: object
   handlers.CreateSeriesRequest:
     properties:
       category_tags:
@@ -25,6 +96,113 @@ definitions:
       thumbnail_url:
         type: string
       title:
+        type: string
+    type: object
+  handlers.CreateSubscriptionRequest:
+    properties:
+      auto_renew:
+        type: boolean
+      plan_id:
+        type: string
+      target_type:
+        type: string
+    type: object
+  handlers.CreateSubscriptionResponse:
+    properties:
+      checkout_url:
+        type: string
+      end_date:
+        type: string
+      next_billing:
+        type: string
+      plan_id:
+        type: string
+      start_date:
+        type: string
+      status:
+        type: string
+      subscription_id:
+        type: string
+    type: object
+  handlers.CreatorContentResponse:
+    properties:
+      series:
+        items:
+          $ref: '#/definitions/handlers.CreatorSeriesResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  handlers.CreatorDashboardResponse:
+    properties:
+      earnings:
+        type: number
+      follower_count:
+        type: integer
+      views:
+        type: integer
+      watch_time_seconds:
+        type: integer
+    type: object
+  handlers.CreatorEpisodeResponse:
+    properties:
+      created_at:
+        type: string
+      duration_seconds:
+        type: integer
+      episode_number:
+        type: integer
+      id:
+        type: string
+      published_at:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  handlers.CreatorOnboardRequest:
+    properties:
+      bio:
+        type: string
+      display_name:
+        type: string
+      kyc_document_s3_path:
+        type: string
+    type: object
+  handlers.CreatorSeriesResponse:
+    properties:
+      category_tags:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      episode_count:
+        type: integer
+      episodes:
+        items:
+          $ref: '#/definitions/handlers.CreatorEpisodeResponse'
+        type: array
+      id:
+        type: string
+      language:
+        type: string
+      price_amount:
+        type: number
+      price_type:
+        type: string
+      status:
+        type: string
+      synopsis:
+        type: string
+      thumbnail_url:
+        type: string
+      title:
+        type: string
+      updated_at:
         type: string
     type: object
   handlers.EpisodeBrief:
@@ -49,6 +227,163 @@ definitions:
         type: string
       view_count:
         type: integer
+    type: object
+  handlers.FirebaseExchangeRequest:
+    properties:
+      id_token:
+        type: string
+    type: object
+  handlers.FirebaseSendOTPRequest:
+    properties:
+      phone:
+        type: string
+      recaptcha_token:
+        type: string
+    type: object
+  handlers.FirebaseSendOTPResponse:
+    properties:
+      message:
+        type: string
+      session_info:
+        type: string
+    type: object
+  handlers.FirebaseVerifyOTPRequest:
+    properties:
+      code:
+        type: string
+      session_info:
+        type: string
+    type: object
+  handlers.LikeRequest:
+    properties:
+      action:
+        description: '"like" or "unlike" (legacy format)'
+        type: string
+      like:
+        description: true = like, false = unlike (new format)
+        type: boolean
+    type: object
+  handlers.LikeResponse:
+    properties:
+      is_liked:
+        type: boolean
+      like_count:
+        type: integer
+      status:
+        type: string
+    type: object
+  handlers.LikedEpisodeItem:
+    properties:
+      episode_id:
+        type: string
+      episode_number:
+        type: integer
+      episode_title:
+        type: string
+      like_count:
+        type: integer
+      liked_at:
+        type: string
+      series_id:
+        type: string
+      series_title:
+        type: string
+      thumbnail_url:
+        type: string
+    type: object
+  handlers.LikedEpisodesResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handlers.LikedEpisodeItem'
+        type: array
+      total:
+        type: integer
+    type: object
+  handlers.ManifestResponse:
+    properties:
+      expires_at:
+        type: string
+      manifest_url:
+        type: string
+    type: object
+  handlers.PendingUpload:
+    properties:
+      content_type:
+        type: string
+      creator_id:
+        type: string
+      episode_id:
+        type: string
+      filename:
+        type: string
+      id:
+        type: string
+      series_id:
+        type: string
+      size_bytes:
+        type: integer
+      status:
+        type: string
+      uploaded_at:
+        type: string
+    type: object
+  handlers.PendingUploadsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handlers.PendingUpload'
+        type: array
+      total:
+        type: integer
+    type: object
+  handlers.PhoneOtpRequest:
+    properties:
+      phone:
+        type: string
+    type: object
+  handlers.PhoneOtpSendResponse:
+    properties:
+      expires_in:
+        type: integer
+      message:
+        type: string
+      txn_id:
+        type: string
+    type: object
+  handlers.PhoneOtpVerifyRequest:
+    properties:
+      otp:
+        type: string
+      phone:
+        type: string
+    type: object
+  handlers.RatingRequest:
+    properties:
+      rating:
+        description: 1-5 stars
+        type: integer
+    type: object
+  handlers.RatingResponse:
+    properties:
+      average_rating:
+        type: number
+      rating:
+        type: integer
+      status:
+        type: string
+      total_ratings:
+        type: integer
+    type: object
+  handlers.RecaptchaSiteKeyResponse:
+    properties:
+      site_key:
+        type: string
+    type: object
+  handlers.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
     type: object
   handlers.SeriesDetailResponse:
     properties:
@@ -143,6 +478,180 @@ definitions:
       total:
         type: integer
     type: object
+  handlers.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+    type: object
+  handlers.UpdateEpisodeStatusRequest:
+    properties:
+      status:
+        type: string
+    type: object
+  handlers.UpdateProfileRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  handlers.UpdateSeriesRequest:
+    properties:
+      category_tags:
+        items:
+          type: string
+        type: array
+      language:
+        type: string
+      price_amount:
+        type: number
+      price_type:
+        type: string
+      status:
+        type: string
+      synopsis:
+        type: string
+      thumbnail_url:
+        type: string
+      title:
+        type: string
+    type: object
+  handlers.UploadNotifyRequest:
+    properties:
+      episode_id:
+        description: 'Optional: link upload to episode'
+        type: string
+      s3_path:
+        type: string
+      size_bytes:
+        type: integer
+    type: object
+  handlers.UploadNotifyResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  handlers.UploadUrlRequest:
+    properties:
+      content_type:
+        type: string
+      filename:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      size_bytes:
+        type: integer
+    type: object
+  handlers.UploadUrlResponse:
+    properties:
+      expires_in:
+        type: integer
+      presigned_url:
+        type: string
+      upload_headers:
+        additionalProperties:
+          type: string
+        type: object
+      upload_id:
+        type: string
+    type: object
+  handlers.UserProfileResponse:
+    properties:
+      id:
+        type: string
+      is_subscribed:
+        type: boolean
+      name:
+        type: string
+      phone:
+        type: string
+      plan_name:
+        type: string
+      subscription_expires_at:
+        type: string
+    type: object
+  handlers.WatchEventRequest:
+    properties:
+      episode_id:
+        type: string
+      watched_seconds:
+        type: integer
+    type: object
+  handlers.WatchHistoryItem:
+    properties:
+      episode_id:
+        type: string
+      episode_number:
+        type: integer
+      episode_title:
+        type: string
+      first_watched_at:
+        type: string
+      series_id:
+        type: string
+      series_title:
+        type: string
+      thumbnail_url:
+        type: string
+      watched_seconds:
+        type: integer
+    type: object
+  handlers.WatchHistoryResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handlers.WatchHistoryItem'
+        type: array
+      total:
+        type: integer
+    type: object
+  handlers.WatchResponse:
+    properties:
+      first_watch:
+        type: boolean
+      success:
+        type: boolean
+      tracked:
+        type: boolean
+    type: object
+  handlers.WebhookRequest:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+      event_type:
+        type: string
+      signature:
+        type: string
+    type: object
+  handlers.WebhookResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  models.AdRevenueBreakdown:
+    properties:
+      total:
+        type: number
+    type: object
+  models.CreatorDetails:
+    properties:
+      bio:
+        type: string
+      display_name:
+        type: string
+      follower_count:
+        type: integer
+      id:
+        type: string
+      kyc_status:
+        type: string
+      rating:
+        type: number
+    type: object
   models.CreatorProfile:
     properties:
       bio:
@@ -176,6 +685,44 @@ definitions:
         description: Relationships
       user_id:
         type: string
+    type: object
+  models.EarningsBreakdown:
+    properties:
+      ad_revenue:
+        $ref: '#/definitions/models.AdRevenueBreakdown'
+      one_time_purchases:
+        $ref: '#/definitions/models.OneTimePurchaseBreakdown'
+      subscription_revenue:
+        $ref: '#/definitions/models.SubscriptionRevenueBreakdown'
+    type: object
+  models.EarningsSummary:
+    properties:
+      available_for_payout:
+        type: number
+      breakdown:
+        $ref: '#/definitions/models.EarningsBreakdown'
+      can_request_payout:
+        type: boolean
+      creator_details:
+        $ref: '#/definitions/models.CreatorDetails'
+      creator_id:
+        type: string
+      currency:
+        type: string
+      last_payout_date:
+        type: string
+      minimum_threshold:
+        type: number
+      next_payout_date:
+        type: string
+      paid_earnings:
+        type: number
+      payout_details:
+        $ref: '#/definitions/models.PayoutDetailsInfo'
+      pending_earnings:
+        type: number
+      total_earnings:
+        type: number
     type: object
   models.Episode:
     properties:
@@ -218,6 +765,13 @@ definitions:
       view_count:
         type: integer
     type: object
+  models.OneTimePurchaseBreakdown:
+    properties:
+      count:
+        type: integer
+      total:
+        type: number
+    type: object
   models.PayoutDetails:
     properties:
       account_holder:
@@ -248,6 +802,72 @@ definitions:
         type: string
       verified:
         type: boolean
+    type: object
+  models.PayoutDetailsInfo:
+    properties:
+      account_holder_name:
+        type: string
+      account_number:
+        type: string
+      account_type:
+        type: string
+      bank_name:
+        type: string
+      ifsc_code:
+        type: string
+      updated_at:
+        type: string
+      upi_id:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  models.PayoutDetailsRequest:
+    properties:
+      account_holder_name:
+        type: string
+      account_number:
+        type: string
+      account_type:
+        description: savings, current
+        type: string
+      bank_name:
+        type: string
+      ifsc_code:
+        type: string
+      upi_id:
+        type: string
+    type: object
+  models.PayoutDetailsResponse:
+    properties:
+      creator_id:
+        type: string
+      payout_details:
+        $ref: '#/definitions/models.PayoutDetailsInfo'
+    type: object
+  models.PayoutRequest:
+    properties:
+      amount:
+        type: number
+      payout_method:
+        type: string
+    type: object
+  models.PayoutResponse:
+    properties:
+      amount:
+        type: number
+      creator_id:
+        type: string
+      estimated_completion:
+        type: string
+      payout_id:
+        type: string
+      razorpay_payout_id:
+        type: string
+      requested_at:
+        type: string
+      status:
+        type: string
     type: object
   models.Series:
     properties:
@@ -290,6 +910,81 @@ definitions:
       view_count:
         type: integer
     type: object
+  models.Subscription:
+    properties:
+      amount:
+        type: number
+      auto_renew:
+        type: boolean
+      created_at:
+        type: string
+      currency:
+        type: string
+      current_period_end:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      end_date:
+        type: string
+      id:
+        type: string
+      plan:
+        $ref: '#/definitions/models.SubscriptionPlan'
+      plan_id:
+        type: string
+      razorpay_subscription_id:
+        type: string
+      start_date:
+        type: string
+      status:
+        type: string
+      target_type:
+        type: string
+      updated_at:
+        type: string
+      user:
+        allOf:
+        - $ref: '#/definitions/models.User'
+        description: Relationships
+      user_id:
+        type: string
+    type: object
+  models.SubscriptionPlan:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      currency:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      duration:
+        description: Duration in days
+        type: integer
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      razorpay_plan_id:
+        description: Maps to Razorpay plan ID
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.SubscriptionRevenueBreakdown:
+    properties:
+      active_subscriptions:
+        type: integer
+      monthly_recurring:
+        type: number
+      total:
+        type: number
+    type: object
   models.User:
     properties:
       created_at:
@@ -329,6 +1024,1790 @@ info:
   title: StreamShort API
   version: "1.0"
 paths:
+  /api/admin/content/approve:
+    post:
+      consumes:
+      - application/json
+      description: Approve or reject pending content.
+      parameters:
+      - description: Approval Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ApproveContentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ApproveContentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Approve Content
+      tags:
+      - admin
+  /api/admin/creators:
+    get:
+      description: List all creators.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.CreatorProfile'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: List Creators
+      tags:
+      - admin
+  /api/admin/creators/{id}:
+    delete:
+      description: Delete a creator profile.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Delete Creator Profile
+      tags:
+      - admin
+  /api/admin/dashboard/stats:
+    get:
+      description: Get overview statistics for admin dashboard.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Dashboard Stats
+      tags:
+      - admin
+  /api/admin/earnings:
+    get:
+      description: List earnings with optional filters.
+      parameters:
+      - description: Creator ID
+        in: query
+        name: creator_id
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: string
+      - description: Earnings Type
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: List Creator Earnings
+      tags:
+      - admin
+  /api/admin/episodes/{id}:
+    delete:
+      description: Delete an episode.
+      parameters:
+      - description: Episode ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Delete Episode
+      tags:
+      - admin
+  /api/admin/payouts:
+    get:
+      description: List all payout requests.
+      parameters:
+      - description: Status filter
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: List Payouts
+      tags:
+      - admin
+  /api/admin/payouts/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update the status of a payout request.
+      parameters:
+      - description: Payout ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Request (status, transaction_ref, failure_reason)
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Update Payout Status
+      tags:
+      - admin
+  /api/admin/revenue/summary:
+    get:
+      description: Get platform-wide revenue statistics.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Revenue Summary
+      tags:
+      - admin
+  /api/admin/series:
+    post:
+      consumes:
+      - application/json
+      description: Create a series on behalf of a creator.
+      parameters:
+      - description: Series Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AdminCreateSeriesRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Series'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Create Series (Admin)
+      tags:
+      - admin
+  /api/admin/series/{id}:
+    delete:
+      description: Delete a series and its episodes.
+      parameters:
+      - description: Series ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Delete Series
+      tags:
+      - admin
+  /api/admin/series/{id}/episodes:
+    post:
+      consumes:
+      - application/json
+      description: Create an episode for a series (Admin).
+      parameters:
+      - description: Series ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Episode Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateEpisodeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Episode'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Create Episode (Admin)
+      tags:
+      - admin
+  /api/admin/subscriptions:
+    get:
+      description: List all subscriptions with filtering.
+      parameters:
+      - description: Status filter (active, expired, cancelled, pending)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: List Subscriptions
+      tags:
+      - admin
+  /api/admin/uploads/{id}/notify:
+    post:
+      consumes:
+      - application/json
+      description: Notify server of admin upload completion.
+      parameters:
+      - description: Upload ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Notify Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UploadNotifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UploadNotifyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Notify Upload Complete (Admin)
+      tags:
+      - admin
+  /api/admin/uploads/pending:
+    get:
+      description: List uploads pending admin approval.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PendingUploadsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Pending Uploads
+      tags:
+      - admin
+  /api/admin/uploads/url:
+    post:
+      consumes:
+      - application/json
+      description: Request presigned upload URL for admin functionality.
+      parameters:
+      - description: Upload Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UploadUrlRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UploadUrlResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Request Upload URL (Admin)
+      tags:
+      - admin
+  /api/admin/users:
+    get:
+      description: List all users with optional role filter.
+      parameters:
+      - description: Role filter (user, admin, creator)
+        in: query
+        name: role
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of Users
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: List Users
+      tags:
+      - admin
+  /api/admin/users/{id}:
+    delete:
+      description: Delete a user and their associated data.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Delete User
+      tags:
+      - admin
+  /api/analytics/watch:
+    post:
+      consumes:
+      - application/json
+      description: Record a watch event for an episode.
+      parameters:
+      - description: Watch Event
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.WatchEventRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.WatchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Record Watch
+      tags:
+      - analytics
+  /api/creators/{creator_id}/earnings:
+    get:
+      description: Get earnings summary for a creator.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: creator_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.EarningsSummary'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Creator Earnings
+      tags:
+      - creator-payment
+  /api/creators/{creator_id}/earnings/breakdown:
+    get:
+      description: Get detailed earnings breakdown by series.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: creator_id
+        required: true
+        type: string
+      - description: Start Date (limit)
+        in: query
+        name: start_date
+        type: string
+      - description: End Date (limit)
+        in: query
+        name: end_date
+        type: string
+      - description: Series ID
+        in: query
+        name: series_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Earnings Breakdown
+      tags:
+      - creator-payment
+  /api/creators/{creator_id}/payout-details:
+    get:
+      description: Get stored bank account details for payouts.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: creator_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PayoutDetailsResponse'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Payout Details
+      tags:
+      - creator-payment
+    put:
+      consumes:
+      - application/json
+      description: Update bank account details for payouts.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: creator_id
+        required: true
+        type: string
+      - description: Payout Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.PayoutDetailsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PayoutDetailsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Update Payout Details
+      tags:
+      - creator-payment
+  /api/creators/{creator_id}/payouts:
+    get:
+      description: Get history of payout requests.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: creator_id
+        required: true
+        type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Per Page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Payout History
+      tags:
+      - creator-payment
+  /api/creators/{creator_id}/payouts/request:
+    post:
+      consumes:
+      - application/json
+      description: Request a payout for available earnings.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: creator_id
+        required: true
+        type: string
+      - description: Payout Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.PayoutRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.PayoutResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Request Payout
+      tags:
+      - creator-payment
+  /api/creators/{id}/dashboard:
+    get:
+      description: Get dashboard analytics and stats for a creator.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CreatorDashboardResponse'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Creator Dashboard
+      tags:
+      - creator
+  /api/creators/{id}/follow:
+    delete:
+      description: Unfollow a creator by ID.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Unfollow Creator
+      tags:
+      - creator
+    post:
+      description: Follow a creator by ID.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Follow Creator
+      tags:
+      - creator
+  /api/creators/{id}/following:
+    get:
+      description: Check if the user is following a specific creator.
+      parameters:
+      - description: Creator ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Check Following Status
+      tags:
+      - creator
+  /api/creators/content:
+    get:
+      description: Get all series and episodes created by the authenticated creator.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CreatorContentResponse'
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Creator Content
+      tags:
+      - creator
+  /api/creators/onboard:
+    post:
+      consumes:
+      - application/json
+      description: Register a new creator profile for the user.
+      parameters:
+      - description: Onboard Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreatorOnboardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.CreatorProfile'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Onboard as Creator
+      tags:
+      - creator
+  /api/creators/profile:
+    get:
+      description: Get the creator profile for the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CreatorProfile'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Own Creator Profile
+      tags:
+      - creator
+    put:
+      consumes:
+      - application/json
+      description: Update the creator profile for the authenticated user.
+      parameters:
+      - description: Update Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreatorOnboardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CreatorProfile'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Update Creator Profile
+      tags:
+      - creator
+  /api/episodes/{id}/like:
+    get:
+      description: Get the like status and count for an episode.
+      parameters:
+      - description: Episode ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LikeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Like Status
+      tags:
+      - social
+    post:
+      consumes:
+      - application/json
+      description: Like or unlike an episode.
+      parameters:
+      - description: Episode ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Like Action
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LikeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LikeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Like/Unlike Episode
+      tags:
+      - social
+  /api/me/following:
+    get:
+      description: List creators followed by the authenticated user.
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Results per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: List Following
+      tags:
+      - creator
+  /api/me/liked-episodes:
+    get:
+      description: Get list of episodes liked by the user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LikedEpisodesResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Liked Episodes
+      tags:
+      - social
+  /api/me/watch-history:
+    get:
+      description: Get the authenticated user's watch history.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.WatchHistoryResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Watch History
+      tags:
+      - user
+  /api/me/watchlist:
+    get:
+      description: Get the user's watchlist.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Watchlist
+      tags:
+      - watchlist
+    post:
+      consumes:
+      - application/json
+      description: Add a series to the user's watchlist.
+      parameters:
+      - description: 'Series ID (JSON: {series_id: string})'
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Add to Watchlist
+      tags:
+      - watchlist
+  /api/me/watchlist/{series_id}:
+    delete:
+      description: Remove a series from the user's watchlist.
+      parameters:
+      - description: Series ID
+        in: path
+        name: series_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Remove from Watchlist
+      tags:
+      - watchlist
+  /api/me/watchlist/{series_id}/status:
+    get:
+      description: Check if a series is in the user's watchlist.
+      parameters:
+      - description: Series ID
+        in: path
+        name: series_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: Check Watchlist Status
+      tags:
+      - watchlist
+  /api/payments/create-subscription:
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription for a plan.
+      parameters:
+      - description: Create Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.CreateSubscriptionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Create Subscription
+      tags:
+      - payment
+  /api/profile:
+    get:
+      description: Get the authenticated user's profile and subscription status.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UserProfileResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Get User Profile
+      tags:
+      - user
+    put:
+      consumes:
+      - application/json
+      description: Update the authenticated user's profile details.
+      parameters:
+      - description: Update Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UserProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Update User Profile
+      tags:
+      - user
+  /api/series/{id}/rating:
+    post:
+      consumes:
+      - application/json
+      description: Rate a series (1-5 stars).
+      parameters:
+      - description: Series ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Rating
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RatingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RatingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Rate Series
+      tags:
+      - social
+  /api/subscriptions:
+    get:
+      description: Get all subscriptions for the authenticated user.
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get User Subscriptions
+      tags:
+      - subscription
+  /api/subscriptions/{id}:
+    get:
+      description: Get details of a specific subscription.
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Subscription'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get User Subscription Details
+      tags:
+      - subscription
+  /api/subscriptions/{id}/cancel:
+    post:
+      description: Cancel an active subscription.
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Cancel Subscription
+      tags:
+      - subscription
+  /api/subscriptions/{id}/renew:
+    post:
+      description: Renew an active or expired subscription.
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Renew Subscription
+      tags:
+      - subscription
+  /api/subscriptions/check:
+    get:
+      description: Check if the user has an active subscription.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Check Subscription Status
+      tags:
+      - subscription
+  /api/subscriptions/plans:
+    get:
+      description: Get list of available subscription plans.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.SubscriptionPlan'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Subscription Plans
+      tags:
+      - subscription
+  /auth/admin/login:
+    post:
+      consumes:
+      - application/json
+      description: Login for admin users using username and password.
+      parameters:
+      - description: Login Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AdminLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Admin Login
+      tags:
+      - auth
+  /auth/create-admin:
+    post:
+      consumes:
+      - application/json
+      description: Create a new admin user (Protected).
+      parameters:
+      - description: Create Admin Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateAdminRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Create Admin
+      tags:
+      - auth
+  /auth/firebase/exchange:
+    post:
+      consumes:
+      - application/json
+      description: Exchange a Firebase ID token for application access/refresh tokens.
+      parameters:
+      - description: Exchange Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.FirebaseExchangeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Exchange Firebase ID Token
+      tags:
+      - auth
+  /auth/firebase/otp/send:
+    post:
+      consumes:
+      - application/json
+      description: Sends an OTP to the given phone number using Firebase Identity
+        Toolkit.
+      parameters:
+      - description: OTP Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.FirebaseSendOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.FirebaseSendOTPResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Send OTP via Firebase
+      tags:
+      - auth
+  /auth/firebase/otp/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the OTP sent via Firebase and returns access tokens.
+      parameters:
+      - description: Verify Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.FirebaseVerifyOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Verify Firebase OTP
+      tags:
+      - auth
+  /auth/otp/send:
+    post:
+      consumes:
+      - application/json
+      description: 'Deprecated: Use /auth/firebase/otp/send instead.'
+      parameters:
+      - description: OTP Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PhoneOtpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.PhoneOtpSendResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Send OTP (Deprecated)
+      tags:
+      - auth
+  /auth/otp/verify:
+    post:
+      consumes:
+      - application/json
+      description: 'Deprecated: Use /auth/firebase/otp/verify instead.'
+      parameters:
+      - description: Verify Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PhoneOtpVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Verify OTP (Deprecated)
+      tags:
+      - auth
+  /auth/recaptcha/site-key:
+    get:
+      description: Returns the reCAPTCHA site key for the client.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RecaptchaSiteKeyResponse'
+      summary: Get Recaptcha Site Key
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Use a refresh token to get a new access token.
+      parameters:
+      - description: Refresh Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Refresh Access Token
+      tags:
+      - auth
+  /content/episodes/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Update the status of an episode.
+      parameters:
+      - description: Episode ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateEpisodeStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Update Episode Status
+      tags:
+      - content
   /content/series:
     get:
       consumes:
@@ -427,6 +2906,89 @@ paths:
       summary: Get series details
       tags:
       - content
+    put:
+      consumes:
+      - application/json
+      description: Update series details.
+      parameters:
+      - description: Series ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateSeriesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Update Series
+      tags:
+      - content
+  /content/series/{id}/episodes:
+    post:
+      consumes:
+      - application/json
+      description: Create a new episode for a series.
+      parameters:
+      - description: Series ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Create Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateEpisodeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Episode'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Create Episode
+      tags:
+      - content
   /content/series/search:
     get:
       consumes:
@@ -464,4 +3026,134 @@ paths:
       summary: Search series
       tags:
       - content
+  /content/upload-url:
+    post:
+      consumes:
+      - application/json
+      description: Request a presigned URL for uploading content (video/thumbnail).
+      parameters:
+      - description: Upload Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UploadUrlRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UploadUrlResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Request Upload URL
+      tags:
+      - content
+  /content/uploads/{upload_id}/notify:
+    post:
+      consumes:
+      - application/json
+      description: Notify the server that a file upload has completed.
+      parameters:
+      - description: Upload ID
+        in: path
+        name: upload_id
+        required: true
+        type: string
+      - description: Notify Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UploadNotifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.UploadNotifyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Notify Upload Complete
+      tags:
+      - content
+  /episodes/{id}/manifest:
+    get:
+      description: Get the HLS manifest or video URL for an episode.
+      parameters:
+      - description: Episode ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.ManifestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Episode Manifest
+      tags:
+      - content
+  /payments/webhook:
+    post:
+      consumes:
+      - application/json
+      description: Handle payment webhooks from Razorpay.
+      parameters:
+      - description: Webhook Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.WebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.WebhookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Payment Webhook
+      tags:
+      - payment
 swagger: "2.0"

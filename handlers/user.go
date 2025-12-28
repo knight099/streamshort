@@ -32,6 +32,15 @@ type UpdateProfileRequest struct {
 }
 
 // GetProfile returns the authenticated user's profile with subscription status
+// GetProfile godoc
+// @Summary Get User Profile
+// @Description Get the authenticated user's profile and subscription status.
+// @Tags user
+// @Produce  json
+// @Success 200 {object} UserProfileResponse
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 404 {string} string "Not Found"
+// @Router /api/profile [get]
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	userIDAny := r.Context().Value("user_id")
 	if userIDAny == nil {
@@ -78,6 +87,18 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateProfile updates the authenticated user's name
+// UpdateProfile godoc
+// @Summary Update User Profile
+// @Description Update the authenticated user's profile details.
+// @Tags user
+// @Accept  json
+// @Produce  json
+// @Param   request  body     UpdateProfileRequest  true  "Update Request"
+// @Success 200 {object} UserProfileResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/profile [put]
 func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	userIDAny := r.Context().Value("user_id")
 	if userIDAny == nil {
@@ -132,6 +153,15 @@ type WatchHistoryResponse struct {
 
 // GetWatchHistory returns the authenticated user's episode watch history
 // GET /api/me/watch-history
+// GetWatchHistory godoc
+// @Summary Get Watch History
+// @Description Get the authenticated user's watch history.
+// @Tags user
+// @Produce  json
+// @Success 200 {object} WatchHistoryResponse
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/me/watch-history [get]
 func (h *UserHandler) GetWatchHistory(w http.ResponseWriter, r *http.Request) {
 	userIDAny := r.Context().Value("user_id")
 	if userIDAny == nil {

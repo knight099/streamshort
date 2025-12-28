@@ -61,6 +61,15 @@ type ApproveContentResponse struct {
 }
 
 // GetPendingUploads lists all pending uploads for admin review
+// GetPendingUploads godoc
+// @Summary Get Pending Uploads
+// @Description List uploads pending admin approval.
+// @Tags admin
+// @Produce  json
+// @Success 200 {object} PendingUploadsResponse
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/uploads/pending [get]
 func (h *AdminHandler) GetPendingUploads(w http.ResponseWriter, r *http.Request) {
 	// In a real implementation, you'd check if the user has admin privileges
 	// For now, we'll assume this endpoint is protected by admin middleware
@@ -102,6 +111,18 @@ func (h *AdminHandler) GetPendingUploads(w http.ResponseWriter, r *http.Request)
 }
 
 // ApproveContent handles content approval/rejection
+// ApproveContent godoc
+// @Summary Approve Content
+// @Description Approve or reject pending content.
+// @Tags admin
+// @Accept  json
+// @Produce  json
+// @Param   request  body     ApproveContentRequest  true  "Approval Request"
+// @Success 200 {object} ApproveContentResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/content/approve [post]
 func (h *AdminHandler) ApproveContent(w http.ResponseWriter, r *http.Request) {
 	// In a real implementation, you'd check if the user has admin privileges
 	// For now, we'll assume this endpoint is protected by admin middleware
@@ -141,6 +162,16 @@ func (h *AdminHandler) ApproveContent(w http.ResponseWriter, r *http.Request) {
 }
 
 // AdminDeleteUser deletes a user (and cascadingly soft-deletes their creator profile)
+// AdminDeleteUser godoc
+// @Summary Delete User
+// @Description Delete a user and their associated data.
+// @Tags admin
+// @Produce  json
+// @Param   id   path     string  true  "User ID"
+// @Success 200 {object} map[string]string
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/users/{id} [delete]
 func (h *AdminHandler) AdminDeleteUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
@@ -175,6 +206,15 @@ func (h *AdminHandler) AdminDeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // AdminDeleteCreator deletes a creator profile (downgrades user to viewer)
+// AdminDeleteCreator godoc
+// @Summary Delete Creator Profile
+// @Description Delete a creator profile.
+// @Tags admin
+// @Produce  json
+// @Param   id   path     string  true  "Creator ID"
+// @Success 200 {object} map[string]string
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/creators/{id} [delete]
 func (h *AdminHandler) AdminDeleteCreator(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	creatorID := vars["id"]
@@ -189,6 +229,15 @@ func (h *AdminHandler) AdminDeleteCreator(w http.ResponseWriter, r *http.Request
 }
 
 // AdminDeleteSeries deletes a series
+// AdminDeleteSeries godoc
+// @Summary Delete Series
+// @Description Delete a series and its episodes.
+// @Tags admin
+// @Produce  json
+// @Param   id   path     string  true  "Series ID"
+// @Success 200 {object} map[string]string
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/series/{id} [delete]
 func (h *AdminHandler) AdminDeleteSeries(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	seriesID := vars["id"]
@@ -207,6 +256,16 @@ func (h *AdminHandler) AdminDeleteSeries(w http.ResponseWriter, r *http.Request)
 }
 
 // AdminDeleteEpisode deletes an episode
+// AdminDeleteEpisode godoc
+// @Summary Delete Episode
+// @Description Delete an episode.
+// @Tags admin
+// @Produce  json
+// @Param   id   path     string  true  "Episode ID"
+// @Success 200 {object} map[string]string
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/episodes/{id} [delete]
 func (h *AdminHandler) AdminDeleteEpisode(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	episodeID := vars["id"]
@@ -252,6 +311,14 @@ type AdminCreateSeriesRequest struct {
 }
 
 // AdminListCreators lists all creators for selection
+// AdminListCreators godoc
+// @Summary List Creators
+// @Description List all creators.
+// @Tags admin
+// @Produce  json
+// @Success 200 {array} models.CreatorProfile
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/creators [get]
 func (h *AdminHandler) AdminListCreators(w http.ResponseWriter, r *http.Request) {
 	var creators []models.CreatorProfile
 	if err := h.db.Find(&creators).Error; err != nil {
@@ -264,6 +331,17 @@ func (h *AdminHandler) AdminListCreators(w http.ResponseWriter, r *http.Request)
 }
 
 // AdminCreateSeries creates a series on behalf of a creator
+// AdminCreateSeries godoc
+// @Summary Create Series (Admin)
+// @Description Create a series on behalf of a creator.
+// @Tags admin
+// @Accept  json
+// @Produce  json
+// @Param   request  body     AdminCreateSeriesRequest  true  "Series Request"
+// @Success 201 {object} models.Series
+// @Failure 400 {string} string "Bad Request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/series [post]
 func (h *AdminHandler) AdminCreateSeries(w http.ResponseWriter, r *http.Request) {
 	var req AdminCreateSeriesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -307,6 +385,19 @@ func (h *AdminHandler) AdminCreateSeries(w http.ResponseWriter, r *http.Request)
 }
 
 // AdminCreateEpisode creates an episode for any series
+// AdminCreateEpisode godoc
+// @Summary Create Episode (Admin)
+// @Description Create an episode for a series (Admin).
+// @Tags admin
+// @Accept  json
+// @Produce  json
+// @Param   id       path     string                true  "Series ID"
+// @Param   request  body     CreateEpisodeRequest  true  "Episode Request"
+// @Success 201 {object} models.Episode
+// @Failure 400 {string} string "Bad Request"
+// @Failure 409 {string} string "Conflict"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/series/{id}/episodes [post]
 func (h *AdminHandler) AdminCreateEpisode(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	seriesID := vars["id"]
@@ -351,6 +442,17 @@ func (h *AdminHandler) AdminCreateEpisode(w http.ResponseWriter, r *http.Request
 }
 
 // AdminRequestUploadURL generates upload URL for admin
+// AdminRequestUploadURL godoc
+// @Summary Request Upload URL (Admin)
+// @Description Request presigned upload URL for admin functionality.
+// @Tags admin
+// @Accept  json
+// @Produce  json
+// @Param   request  body     UploadUrlRequest  true  "Upload Request"
+// @Success 200 {object} UploadUrlResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/uploads/url [post]
 func (h *AdminHandler) AdminRequestUploadURL(w http.ResponseWriter, r *http.Request) {
 	userID, _ := r.Context().Value("user_id").(string) // Admin's user ID
 
@@ -418,6 +520,18 @@ func (h *AdminHandler) AdminRequestUploadURL(w http.ResponseWriter, r *http.Requ
 }
 
 // AdminNotifyUploadComplete handles upload completion for admin
+// AdminNotifyUploadComplete godoc
+// @Summary Notify Upload Complete (Admin)
+// @Description Notify server of admin upload completion.
+// @Tags admin
+// @Accept  json
+// @Produce  json
+// @Param   id       path     string               true  "Upload ID"
+// @Param   request  body     UploadNotifyRequest  true  "Notify Request"
+// @Success 200 {object} UploadNotifyResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Router /api/admin/uploads/{id}/notify [post]
 func (h *AdminHandler) AdminNotifyUploadComplete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uploadID := vars["id"]
@@ -469,6 +583,15 @@ func (h *AdminHandler) AdminNotifyUploadComplete(w http.ResponseWriter, r *http.
 // ========== ADMIN SUBSCRIPTION & FINANCE TRACKING ==========
 
 // AdminListSubscriptions lists all subscriptions with optional filters
+// AdminListSubscriptions godoc
+// @Summary List Subscriptions
+// @Description List all subscriptions with filtering.
+// @Tags admin
+// @Produce  json
+// @Param   status   query    string  false  "Status filter (active, expired, cancelled, pending)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/subscriptions [get]
 func (h *AdminHandler) AdminListSubscriptions(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status") // active, expired, cancelled, pending
 
@@ -501,6 +624,15 @@ func (h *AdminHandler) AdminListSubscriptions(w http.ResponseWriter, r *http.Req
 }
 
 // AdminListPayouts lists all payouts with optional status filter
+// AdminListPayouts godoc
+// @Summary List Payouts
+// @Description List all payout requests.
+// @Tags admin
+// @Produce  json
+// @Param   status   query    string  false  "Status filter"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/payouts [get]
 func (h *AdminHandler) AdminListPayouts(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status") // pending, processing, completed, failed
 
@@ -563,6 +695,13 @@ func (h *AdminHandler) AdminListPayouts(w http.ResponseWriter, r *http.Request) 
 }
 
 // AdminGetRevenueSummary provides platform-wide revenue summary
+// AdminGetRevenueSummary godoc
+// @Summary Get Revenue Summary
+// @Description Get platform-wide revenue statistics.
+// @Tags admin
+// @Produce  json
+// @Success 200 {object} map[string]interface{}
+// @Router /api/admin/revenue/summary [get]
 func (h *AdminHandler) AdminGetRevenueSummary(w http.ResponseWriter, r *http.Request) {
 	// Total subscription revenue
 	var totalSubscriptionRevenue float64
@@ -620,6 +759,17 @@ func (h *AdminHandler) AdminGetRevenueSummary(w http.ResponseWriter, r *http.Req
 }
 
 // AdminListEarnings lists all creator earnings with optional filters
+// AdminListEarnings godoc
+// @Summary List Creator Earnings
+// @Description List earnings with optional filters.
+// @Tags admin
+// @Produce  json
+// @Param   creator_id  query    string  false  "Creator ID"
+// @Param   status      query    string  false  "Status"
+// @Param   type        query    string  false  "Earnings Type"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/earnings [get]
 func (h *AdminHandler) AdminListEarnings(w http.ResponseWriter, r *http.Request) {
 	creatorID := r.URL.Query().Get("creator_id")
 	status := r.URL.Query().Get("status")     // pending, paid, cancelled
@@ -657,6 +807,18 @@ func (h *AdminHandler) AdminListEarnings(w http.ResponseWriter, r *http.Request)
 }
 
 // AdminUpdatePayoutStatus allows admin to update payout status
+// AdminUpdatePayoutStatus godoc
+// @Summary Update Payout Status
+// @Description Update the status of a payout request.
+// @Tags admin
+// @Accept  json
+// @Produce  json
+// @Param   id       path     string  true  "Payout ID"
+// @Param   request  body     map[string]interface{}  true  "Update Request (status, transaction_ref, failure_reason)"
+// @Success 200 {object} map[string]string
+// @Failure 400 {string} string "Bad Request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/payouts/{id} [put]
 func (h *AdminHandler) AdminUpdatePayoutStatus(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	payoutID := vars["id"]
@@ -707,6 +869,13 @@ func (h *AdminHandler) AdminUpdatePayoutStatus(w http.ResponseWriter, r *http.Re
 // ========== ADMIN DASHBOARD & MANAGEMENT ==========
 
 // AdminDashboardStats returns overview statistics for the admin dashboard
+// AdminDashboardStats godoc
+// @Summary Get Dashboard Stats
+// @Description Get overview statistics for admin dashboard.
+// @Tags admin
+// @Produce  json
+// @Success 200 {object} map[string]interface{}
+// @Router /api/admin/dashboard/stats [get]
 func (h *AdminHandler) AdminDashboardStats(w http.ResponseWriter, r *http.Request) {
 	var totalUsers int64
 	h.db.Model(&models.User{}).Count(&totalUsers)
@@ -735,6 +904,16 @@ func (h *AdminHandler) AdminDashboardStats(w http.ResponseWriter, r *http.Reques
 }
 
 // AdminListUsers returns all users for the admin panel
+// AdminListUsers godoc
+// @Summary List Users
+// @Description List all users with optional role filter.
+// @Tags admin
+// @Produce  json
+// @Param   role     query    string  false  "Role filter (user, admin, creator)"
+// @Success 200 {array} map[string]interface{}
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/admin/users [get]
+// @Response 200 {array} map[string]interface{} "List of Users"
 func (h *AdminHandler) AdminListUsers(w http.ResponseWriter, r *http.Request) {
 	// Parse query params for filtering
 	role := r.URL.Query().Get("role") // user, admin, creator

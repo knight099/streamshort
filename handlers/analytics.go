@@ -37,6 +37,18 @@ type WatchResponse struct {
 }
 
 // POST /api/analytics/watch
+// RecordWatch godoc
+// @Summary Record Watch
+// @Description Record a watch event for an episode.
+// @Tags analytics
+// @Accept  json
+// @Produce  json
+// @Param   request  body     WatchEventRequest  true  "Watch Event"
+// @Success 200 {object} WatchResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/analytics/watch [post]
 func (h *AnalyticsHandler) RecordWatch(w http.ResponseWriter, r *http.Request) {
 	// Get User ID from context (Auth Middleware may or may not be present)
 	userID, ok := r.Context().Value("user_id").(string)

@@ -25,6 +25,16 @@ func NewCreatorPaymentHandler(db *gorm.DB, razorpayClient *services.RazorpayClie
 
 // GetCreatorEarnings returns earnings summary for a creator
 // GET /api/creators/{creator_id}/earnings
+// GetCreatorEarnings godoc
+// @Summary Get Creator Earnings
+// @Description Get earnings summary for a creator.
+// @Tags creator-payment
+// @Produce  json
+// @Param   creator_id  path     string  true  "Creator ID"
+// @Success 200 {object} models.EarningsSummary
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/{creator_id}/earnings [get]
 func (h *CreatorPaymentHandler) GetCreatorEarnings(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	creatorID := vars["creator_id"]
@@ -206,6 +216,19 @@ func (h *CreatorPaymentHandler) calculateEarningsSummary(creatorID string) (*mod
 
 // RequestPayout handles payout request from a creator
 // POST /api/creators/{creator_id}/payouts/request
+// RequestPayout godoc
+// @Summary Request Payout
+// @Description Request a payout for available earnings.
+// @Tags creator-payment
+// @Accept  json
+// @Produce  json
+// @Param   creator_id  path     string              true  "Creator ID"
+// @Param   request     body     models.PayoutRequest true  "Payout Request"
+// @Success 201 {object} models.PayoutResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/{creator_id}/payouts/request [post]
 func (h *CreatorPaymentHandler) RequestPayout(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	creatorID := vars["creator_id"]
@@ -411,6 +434,18 @@ func (h *CreatorPaymentHandler) initiateRazorpayPayout(creatorID string, amount 
 
 // GetPayoutHistory returns payout history for a creator
 // GET /api/creators/{creator_id}/payouts
+// GetPayoutHistory godoc
+// @Summary Get Payout History
+// @Description Get history of payout requests.
+// @Tags creator-payment
+// @Produce  json
+// @Param   creator_id  path     string  true  "Creator ID"
+// @Param   page        query    int     false "Page"
+// @Param   per_page    query    int     false "Per Page"
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/{creator_id}/payouts [get]
 func (h *CreatorPaymentHandler) GetPayoutHistory(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	creatorID := vars["creator_id"]
@@ -490,6 +525,16 @@ func (h *CreatorPaymentHandler) GetPayoutHistory(w http.ResponseWriter, r *http.
 
 // GetPayoutDetails returns payout/bank account details for a creator
 // GET /api/creators/{creator_id}/payout-details
+// GetPayoutDetails godoc
+// @Summary Get Payout Details
+// @Description Get stored bank account details for payouts.
+// @Tags creator-payment
+// @Produce  json
+// @Param   creator_id  path     string  true  "Creator ID"
+// @Success 200 {object} models.PayoutDetailsResponse
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/{creator_id}/payout-details [get]
 func (h *CreatorPaymentHandler) GetPayoutDetails(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	creatorID := vars["creator_id"]
@@ -549,6 +594,19 @@ func (h *CreatorPaymentHandler) GetPayoutDetails(w http.ResponseWriter, r *http.
 
 // UpdatePayoutDetails updates payout/bank account details for a creator
 // PUT /api/creators/{creator_id}/payout-details
+// UpdatePayoutDetails godoc
+// @Summary Update Payout Details
+// @Description Update bank account details for payouts.
+// @Tags creator-payment
+// @Accept  json
+// @Produce  json
+// @Param   creator_id  path     string                     true  "Creator ID"
+// @Param   request     body     models.PayoutDetailsRequest true  "Payout Details"
+// @Success 200 {object} models.PayoutDetailsResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/{creator_id}/payout-details [put]
 func (h *CreatorPaymentHandler) UpdatePayoutDetails(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	creatorID := vars["creator_id"]
@@ -668,6 +726,19 @@ func (h *CreatorPaymentHandler) UpdatePayoutDetails(w http.ResponseWriter, r *ht
 
 // GetEarningsBreakdown returns detailed earnings breakdown by series/episode
 // GET /api/creators/{creator_id}/earnings/breakdown
+// GetEarningsBreakdown godoc
+// @Summary Get Earnings Breakdown
+// @Description Get detailed earnings breakdown by series.
+// @Tags creator-payment
+// @Produce  json
+// @Param   creator_id  path     string  true  "Creator ID"
+// @Param   start_date  query    string  false "Start Date (limit)"
+// @Param   end_date    query    string  false "End Date (limit)"
+// @Param   series_id   query    string  false "Series ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/{creator_id}/earnings/breakdown [get]
 func (h *CreatorPaymentHandler) GetEarningsBreakdown(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	creatorID := vars["creator_id"]

@@ -35,6 +35,18 @@ type CreatorDashboardResponse struct {
 }
 
 // Creator onboarding endpoint
+// OnboardCreator godoc
+// @Summary Onboard as Creator
+// @Description Register a new creator profile for the user.
+// @Tags creator
+// @Accept  json
+// @Produce  json
+// @Param   request  body     CreatorOnboardRequest  true  "Onboard Request"
+// @Success 201 {object} models.CreatorProfile
+// @Failure 400 {string} string "Bad Request"
+// @Failure 409 {string} string "Conflict"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/onboard [post]
 func (h *CreatorHandler) OnboardCreator(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
 	userID, ok := r.Context().Value("user_id").(string)
@@ -91,6 +103,16 @@ func (h *CreatorHandler) OnboardCreator(w http.ResponseWriter, r *http.Request) 
 }
 
 // Creator dashboard endpoint
+// GetCreatorDashboard godoc
+// @Summary Get Creator Dashboard
+// @Description Get dashboard analytics and stats for a creator.
+// @Tags creator
+// @Produce  json
+// @Param   id   path     string  true  "Creator ID"
+// @Success 200 {object} CreatorDashboardResponse
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/{id}/dashboard [get]
 func (h *CreatorHandler) GetCreatorDashboard(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID, ok := r.Context().Value("user_id").(string)
@@ -155,6 +177,15 @@ func (h *CreatorHandler) GetCreatorDashboard(w http.ResponseWriter, r *http.Requ
 }
 
 // Get creator profile endpoint
+// GetCreatorProfile godoc
+// @Summary Get Own Creator Profile
+// @Description Get the creator profile for the authenticated user.
+// @Tags creator
+// @Produce  json
+// @Success 200 {object} models.CreatorProfile
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/profile [get]
 func (h *CreatorHandler) GetCreatorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID, ok := r.Context().Value("user_id").(string)
@@ -185,6 +216,16 @@ func (h *CreatorHandler) GetCreatorProfile(w http.ResponseWriter, r *http.Reques
 }
 
 // Follow a creator
+// FollowCreator godoc
+// @Summary Follow Creator
+// @Description Follow a creator by ID.
+// @Tags creator
+// @Produce  json
+// @Param   id   path     string  true  "Creator ID"
+// @Success 200 {object} map[string]string
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/{id}/follow [post]
 func (h *CreatorHandler) FollowCreator(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("user_id").(string)
 	if !ok {
@@ -220,6 +261,16 @@ func (h *CreatorHandler) FollowCreator(w http.ResponseWriter, r *http.Request) {
 }
 
 // Unfollow a creator
+// UnfollowCreator godoc
+// @Summary Unfollow Creator
+// @Description Unfollow a creator by ID.
+// @Tags creator
+// @Produce  json
+// @Param   id   path     string  true  "Creator ID"
+// @Success 200 {object} map[string]string
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/{id}/follow [delete]
 func (h *CreatorHandler) UnfollowCreator(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("user_id").(string)
 	if !ok {
@@ -244,6 +295,16 @@ func (h *CreatorHandler) UnfollowCreator(w http.ResponseWriter, r *http.Request)
 }
 
 // List creators the user follows
+// ListFollowing godoc
+// @Summary List Following
+// @Description List creators followed by the authenticated user.
+// @Tags creator
+// @Produce  json
+// @Param   page         query    int     false  "Page number"
+// @Param   limit        query    int     false  "Results per page"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/me/following [get]
 func (h *CreatorHandler) ListFollowing(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("user_id").(string)
 	if !ok {
@@ -282,6 +343,15 @@ func (h *CreatorHandler) ListFollowing(w http.ResponseWriter, r *http.Request) {
 }
 
 // Check if current user follows a creator
+// IsFollowing godoc
+// @Summary Check Following Status
+// @Description Check if the user is following a specific creator.
+// @Tags creator
+// @Produce  json
+// @Param   id   path     string  true  "Creator ID"
+// @Success 200 {object} map[string]bool
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/{id}/following [get]
 func (h *CreatorHandler) IsFollowing(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("user_id").(string)
 	if !ok {
@@ -301,6 +371,18 @@ func (h *CreatorHandler) IsFollowing(w http.ResponseWriter, r *http.Request) {
 }
 
 // Update creator profile endpoint
+// UpdateCreatorProfile godoc
+// @Summary Update Creator Profile
+// @Description Update the creator profile for the authenticated user.
+// @Tags creator
+// @Accept  json
+// @Produce  json
+// @Param   request  body     CreatorOnboardRequest  true  "Update Request"
+// @Success 200 {object} models.CreatorProfile
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/profile [put]
 func (h *CreatorHandler) UpdateCreatorProfile(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID, ok := r.Context().Value("user_id").(string)

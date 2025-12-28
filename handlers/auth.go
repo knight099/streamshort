@@ -61,6 +61,17 @@ type TokenResponse struct {
 
 // Firebase OTP: send code to phone using Identity Toolkit REST API
 // Client must provide a reCAPTCHA token obtained from Firebase SDK on client side
+// FirebaseSendOTP godoc
+// @Summary Send OTP via Firebase
+// @Description Sends an OTP to the given phone number using Firebase Identity Toolkit.
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param   request  body     FirebaseSendOTPRequest  true  "OTP Request"
+// @Success 200 {object} FirebaseSendOTPResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /auth/firebase/otp/send [post]
 func (h *AuthHandler) FirebaseSendOTP(w http.ResponseWriter, r *http.Request) {
 	if h.firebaseAPIKey == "" {
 		log.Printf("[auth] FirebaseSendOTP: missing Firebase API key")
@@ -124,6 +135,17 @@ func (h *AuthHandler) FirebaseSendOTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Firebase OTP: verify the code and sign in
+// FirebaseVerifyOTP godoc
+// @Summary Verify Firebase OTP
+// @Description Verifies the OTP sent via Firebase and returns access tokens.
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param   request  body     FirebaseVerifyOTPRequest  true  "Verify Request"
+// @Success 200 {object} TokenResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /auth/firebase/otp/verify [post]
 func (h *AuthHandler) FirebaseVerifyOTP(w http.ResponseWriter, r *http.Request) {
 	if h.firebaseAPIKey == "" {
 		log.Printf("[auth] FirebaseVerifyOTP: missing Firebase API key")
@@ -234,6 +256,18 @@ func (h *AuthHandler) FirebaseVerifyOTP(w http.ResponseWriter, r *http.Request) 
 }
 
 // Exchange a Firebase ID token (from native SDK signInWithPhoneNumber) for app tokens
+// FirebaseExchangeIDToken godoc
+// @Summary Exchange Firebase ID Token
+// @Description Exchange a Firebase ID token for application access/refresh tokens.
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param   request  body     FirebaseExchangeRequest  true  "Exchange Request"
+// @Success 200 {object} TokenResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /auth/firebase/exchange [post]
 func (h *AuthHandler) FirebaseExchangeIDToken(w http.ResponseWriter, r *http.Request) {
 	if h.firebaseAPIKey == "" {
 		log.Printf("[auth] FirebaseExchangeIDToken: missing Firebase API key")
@@ -386,6 +420,16 @@ func GetJWTSecret() string {
 }
 
 // Send OTP endpoint
+// SendOTP godoc
+// @Summary Send OTP (Deprecated)
+// @Description Deprecated: Use /auth/firebase/otp/send instead.
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param   request  body     PhoneOtpRequest  true  "OTP Request"
+// @Success 200 {object} PhoneOtpSendResponse
+// @Failure 400 {string} string "Bad Request"
+// @Router /auth/otp/send [post]
 func (h *AuthHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 	var req PhoneOtpRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -411,6 +455,18 @@ func (h *AuthHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Verify OTP endpoint
+// VerifyOTP godoc
+// @Summary Verify OTP (Deprecated)
+// @Description Deprecated: Use /auth/firebase/otp/verify instead.
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param   request  body     PhoneOtpVerifyRequest  true  "Verify Request"
+// @Success 200 {object} TokenResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /auth/otp/verify [post]
 func (h *AuthHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	var req PhoneOtpVerifyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -475,6 +531,18 @@ func (h *AuthHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Refresh token endpoint
+// RefreshToken godoc
+// @Summary Refresh Access Token
+// @Description Use a refresh token to get a new access token.
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param   request  body     RefreshRequest  true  "Refresh Request"
+// @Success 200 {object} TokenResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -529,6 +597,18 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 }
 
 // AdminLogin handles username/password login for admins
+// AdminLogin godoc
+// @Summary Admin Login
+// @Description Login for admin users using username and password.
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param   request  body     AdminLoginRequest  true  "Login Request"
+// @Success 200 {object} TokenResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /auth/admin/login [post]
 func (h *AuthHandler) AdminLogin(w http.ResponseWriter, r *http.Request) {
 	var req AdminLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -599,6 +679,18 @@ func (h *AuthHandler) EnsureDefaultAdmin() {
 }
 
 // CreateAdmin creates a new admin user (Protected by Middleware in main)
+// CreateAdmin godoc
+// @Summary Create Admin
+// @Description Create a new admin user (Protected).
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param   request  body     CreateAdminRequest  true  "Create Admin Request"
+// @Success 201 {object} map[string]string
+// @Failure 400 {string} string "Bad Request"
+// @Failure 409 {string} string "Conflict"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /auth/create-admin [post]
 func (h *AuthHandler) CreateAdmin(w http.ResponseWriter, r *http.Request) {
 	var req CreateAdminRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -697,6 +789,13 @@ type RecaptchaSiteKeyResponse struct {
 	SiteKey string `json:"site_key"`
 }
 
+// GetRecaptchaSiteKey godoc
+// @Summary Get Recaptcha Site Key
+// @Description Returns the reCAPTCHA site key for the client.
+// @Tags auth
+// @Produce  json
+// @Success 200 {object} RecaptchaSiteKeyResponse
+// @Router /auth/recaptcha/site-key [get]
 func (h *AuthHandler) GetRecaptchaSiteKey(w http.ResponseWriter, r *http.Request) {
 	// This handler will be wired with a closure to include the site key
 	w.Header().Set("Content-Type", "application/json")

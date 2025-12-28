@@ -51,6 +51,18 @@ type WebhookResponse struct {
 }
 
 // CreateSubscription handles subscription creation
+// CreateSubscription godoc
+// @Summary Create Subscription
+// @Description Create a new subscription for a plan.
+// @Tags payment
+// @Accept  json
+// @Produce  json
+// @Param   request  body     CreateSubscriptionRequest  true  "Create Request"
+// @Success 201 {object} CreateSubscriptionResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 409 {string} string "Conflict"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/payments/create-subscription [post]
 func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
 	userID, ok := r.Context().Value("user_id").(string)
@@ -237,6 +249,16 @@ func (h *PaymentHandler) CreateSubscription(w http.ResponseWriter, r *http.Reque
 }
 
 // Webhook handles payment webhooks from Razorpay
+// Webhook godoc
+// @Summary Payment Webhook
+// @Description Handle payment webhooks from Razorpay.
+// @Tags payment
+// @Accept  json
+// @Produce  json
+// @Param   request  body     WebhookRequest  true  "Webhook Payload"
+// @Success 200 {object} WebhookResponse
+// @Failure 400 {string} string "Bad Request"
+// @Router /payments/webhook [post]
 func (h *PaymentHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	// Razorpay sends webhook as JSON with event and payload fields
 	var webhookPayload map[string]interface{}

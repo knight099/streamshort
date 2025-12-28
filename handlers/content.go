@@ -573,6 +573,19 @@ func (h *ContentHandler) GetSeries(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateSeries updates a series
+// UpdateSeries godoc
+// @Summary Update Series
+// @Description Update series details.
+// @Tags content
+// @Accept  json
+// @Produce  json
+// @Param   id       path     string               true  "Series ID"
+// @Param   request  body     UpdateSeriesRequest  true  "Update Request"
+// @Success 200 {object} map[string]string
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /content/series/{id} [put]
 func (h *ContentHandler) UpdateSeries(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	seriesID := vars["id"]
@@ -652,6 +665,20 @@ func (h *ContentHandler) UpdateSeries(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateEpisode creates episode metadata for a series
+// CreateEpisode godoc
+// @Summary Create Episode
+// @Description Create a new episode for a series.
+// @Tags content
+// @Accept  json
+// @Produce  json
+// @Param   id       path     string                true  "Series ID"
+// @Param   request  body     CreateEpisodeRequest  true  "Create Request"
+// @Success 201 {object} models.Episode
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 409 {string} string "Conflict"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /content/series/{id}/episodes [post]
 func (h *ContentHandler) CreateEpisode(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	seriesID := vars["id"]
@@ -721,6 +748,17 @@ func (h *ContentHandler) CreateEpisode(w http.ResponseWriter, r *http.Request) {
 }
 
 // RequestUploadURL generates a pre-signed upload URL
+// RequestUploadURL godoc
+// @Summary Request Upload URL
+// @Description Request a presigned URL for uploading content (video/thumbnail).
+// @Tags content
+// @Accept  json
+// @Produce  json
+// @Param   request  body     UploadUrlRequest  true  "Upload Request"
+// @Success 200 {object} UploadUrlResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /content/upload-url [post]
 func (h *ContentHandler) RequestUploadURL(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID, ok := r.Context().Value("user_id").(string)
@@ -847,6 +885,19 @@ func (h *ContentHandler) RequestUploadURL(w http.ResponseWriter, r *http.Request
 }
 
 // NotifyUploadComplete handles upload completion notification
+// NotifyUploadComplete godoc
+// @Summary Notify Upload Complete
+// @Description Notify the server that a file upload has completed.
+// @Tags content
+// @Accept  json
+// @Produce  json
+// @Param   upload_id  path     string               true  "Upload ID"
+// @Param   request    body     UploadNotifyRequest  true  "Notify Request"
+// @Success 200 {object} UploadNotifyResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /content/uploads/{upload_id}/notify [post]
 func (h *ContentHandler) NotifyUploadComplete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uploadID := vars["upload_id"]
@@ -974,6 +1025,18 @@ func (h *ContentHandler) NotifyUploadComplete(w http.ResponseWriter, r *http.Req
 }
 
 // GetEpisodeManifest gets signed HLS manifest URL for playback
+// GetEpisodeManifest godoc
+// @Summary Get Episode Manifest
+// @Description Get the HLS manifest or video URL for an episode.
+// @Tags content
+// @Produce  json
+// @Param   id   path     string  true  "Episode ID"
+// @Success 200 {object} ManifestResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 403 {string} string "Forbidden"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /episodes/{id}/manifest [get]
 func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	episodeID := vars["id"]
@@ -1170,6 +1233,15 @@ type CreatorEpisodeResponse struct {
 }
 
 // GetCreatorContent fetches all series and episodes created by the authenticated creator
+// GetCreatorContent godoc
+// @Summary Get Creator Content
+// @Description Get all series and episodes created by the authenticated creator.
+// @Tags creator
+// @Produce  json
+// @Success 200 {object} CreatorContentResponse
+// @Failure 403 {string} string "Forbidden"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/creators/content [get]
 func (h *ContentHandler) GetCreatorContent(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
 	userID, ok := r.Context().Value("user_id").(string)
@@ -1254,6 +1326,19 @@ type UpdateEpisodeStatusRequest struct {
 }
 
 // UpdateEpisodeStatus allows the creator to update the status of an episode
+// UpdateEpisodeStatus godoc
+// @Summary Update Episode Status
+// @Description Update the status of an episode.
+// @Tags content
+// @Accept  json
+// @Produce  json
+// @Param   id       path     string                      true  "Episode ID"
+// @Param   request  body     UpdateEpisodeStatusRequest  true  "Update Request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /content/episodes/{id}/status [put]
 func (h *ContentHandler) UpdateEpisodeStatus(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	episodeID := vars["id"]

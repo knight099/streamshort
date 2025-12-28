@@ -21,6 +21,16 @@ func NewSubscriptionHandler(db *gorm.DB) *SubscriptionHandler {
 }
 
 // GetUserSubscriptions returns all subscriptions for the authenticated user
+// GetUserSubscriptions godoc
+// @Summary Get User Subscriptions
+// @Description Get all subscriptions for the authenticated user.
+// @Tags subscription
+// @Produce  json
+// @Param   page      query    int     false  "Page number"
+// @Param   per_page  query    int     false  "Items per page"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/subscriptions [get]
 func (h *SubscriptionHandler) GetUserSubscriptions(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID, ok := r.Context().Value("user_id").(string)
@@ -75,6 +85,16 @@ func (h *SubscriptionHandler) GetUserSubscriptions(w http.ResponseWriter, r *htt
 }
 
 // GetUserSubscription returns a specific subscription for the authenticated user
+// GetUserSubscription godoc
+// @Summary Get User Subscription Details
+// @Description Get details of a specific subscription.
+// @Tags subscription
+// @Produce  json
+// @Param   id   path     string  true  "Subscription ID"
+// @Success 200 {object} models.Subscription
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/subscriptions/{id} [get]
 func (h *SubscriptionHandler) GetUserSubscription(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID, ok := r.Context().Value("user_id").(string)
@@ -105,6 +125,17 @@ func (h *SubscriptionHandler) GetUserSubscription(w http.ResponseWriter, r *http
 }
 
 // CancelUserSubscription cancels a user's subscription
+// CancelUserSubscription godoc
+// @Summary Cancel Subscription
+// @Description Cancel an active subscription.
+// @Tags subscription
+// @Produce  json
+// @Param   id   path     string  true  "Subscription ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/subscriptions/{id}/cancel [post]
 func (h *SubscriptionHandler) CancelUserSubscription(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID, ok := r.Context().Value("user_id").(string)
@@ -153,6 +184,17 @@ func (h *SubscriptionHandler) CancelUserSubscription(w http.ResponseWriter, r *h
 }
 
 // RenewUserSubscription renews a user's subscription
+// RenewUserSubscription godoc
+// @Summary Renew Subscription
+// @Description Renew an active or expired subscription.
+// @Tags subscription
+// @Produce  json
+// @Param   id   path     string  true  "Subscription ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/subscriptions/{id}/renew [post]
 func (h *SubscriptionHandler) RenewUserSubscription(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID, ok := r.Context().Value("user_id").(string)
@@ -216,6 +258,14 @@ func (h *SubscriptionHandler) RenewUserSubscription(w http.ResponseWriter, r *ht
 }
 
 // GetSubscriptionPlans returns available subscription plans
+// GetSubscriptionPlans godoc
+// @Summary Get Subscription Plans
+// @Description Get list of available subscription plans.
+// @Tags subscription
+// @Produce  json
+// @Success 200 {array} models.SubscriptionPlan
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/subscriptions/plans [get]
 func (h *SubscriptionHandler) GetSubscriptionPlans(w http.ResponseWriter, r *http.Request) {
 	var plans []models.SubscriptionPlan
 
@@ -229,6 +279,13 @@ func (h *SubscriptionHandler) GetSubscriptionPlans(w http.ResponseWriter, r *htt
 }
 
 // CheckSubscriptionStatus checks if a user has access to specific content
+// CheckSubscriptionStatus godoc
+// @Summary Check Subscription Status
+// @Description Check if the user has an active subscription.
+// @Tags subscription
+// @Produce  json
+// @Success 200 {object} map[string]interface{}
+// @Router /api/subscriptions/check [get]
 func (h *SubscriptionHandler) CheckSubscriptionStatus(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userID, ok := r.Context().Value("user_id").(string)

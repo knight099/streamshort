@@ -24,6 +24,2712 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/admin/content/approve": {
+            "post": {
+                "description": "Approve or reject pending content.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Approve Content",
+                "parameters": [
+                    {
+                        "description": "Approval Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApproveContentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApproveContentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/creators": {
+            "get": {
+                "description": "List all creators.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List Creators",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.CreatorProfile"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/creators/{id}": {
+            "delete": {
+                "description": "Delete a creator profile.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Delete Creator Profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/dashboard/stats": {
+            "get": {
+                "description": "Get overview statistics for admin dashboard.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get Dashboard Stats",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/earnings": {
+            "get": {
+                "description": "List earnings with optional filters.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List Creator Earnings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "creator_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Earnings Type",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/episodes/{id}": {
+            "delete": {
+                "description": "Delete an episode.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Delete Episode",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Episode ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/payouts": {
+            "get": {
+                "description": "List all payout requests.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List Payouts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Status filter",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/payouts/{id}": {
+            "put": {
+                "description": "Update the status of a payout request.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Update Payout Status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payout ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update Request (status, transaction_ref, failure_reason)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/revenue/summary": {
+            "get": {
+                "description": "Get platform-wide revenue statistics.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get Revenue Summary",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/series": {
+            "post": {
+                "description": "Create a series on behalf of a creator.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Create Series (Admin)",
+                "parameters": [
+                    {
+                        "description": "Series Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.AdminCreateSeriesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Series"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/series/{id}": {
+            "delete": {
+                "description": "Delete a series and its episodes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Delete Series",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Series ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/series/{id}/episodes": {
+            "post": {
+                "description": "Create an episode for a series (Admin).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Create Episode (Admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Series ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Episode Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreateEpisodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Episode"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/subscriptions": {
+            "get": {
+                "description": "List all subscriptions with filtering.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List Subscriptions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Status filter (active, expired, cancelled, pending)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/uploads/pending": {
+            "get": {
+                "description": "List uploads pending admin approval.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get Pending Uploads",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PendingUploadsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/uploads/url": {
+            "post": {
+                "description": "Request presigned upload URL for admin functionality.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Request Upload URL (Admin)",
+                "parameters": [
+                    {
+                        "description": "Upload Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UploadUrlRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UploadUrlResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/uploads/{id}/notify": {
+            "post": {
+                "description": "Notify server of admin upload completion.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Notify Upload Complete (Admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Upload ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Notify Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UploadNotifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UploadNotifyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/users": {
+            "get": {
+                "description": "List all users with optional role filter.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List Users",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Role filter (user, admin, creator)",
+                        "name": "role",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of Users",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/users/{id}": {
+            "delete": {
+                "description": "Delete a user and their associated data.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Delete User",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/analytics/watch": {
+            "post": {
+                "description": "Record a watch event for an episode.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "analytics"
+                ],
+                "summary": "Record Watch",
+                "parameters": [
+                    {
+                        "description": "Watch Event",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.WatchEventRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.WatchResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/content": {
+            "get": {
+                "description": "Get all series and episodes created by the authenticated creator.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator"
+                ],
+                "summary": "Get Creator Content",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreatorContentResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/onboard": {
+            "post": {
+                "description": "Register a new creator profile for the user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator"
+                ],
+                "summary": "Onboard as Creator",
+                "parameters": [
+                    {
+                        "description": "Onboard Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreatorOnboardRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.CreatorProfile"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/profile": {
+            "get": {
+                "description": "Get the creator profile for the authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator"
+                ],
+                "summary": "Get Own Creator Profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CreatorProfile"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update the creator profile for the authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator"
+                ],
+                "summary": "Update Creator Profile",
+                "parameters": [
+                    {
+                        "description": "Update Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreatorOnboardRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CreatorProfile"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/{creator_id}/earnings": {
+            "get": {
+                "description": "Get earnings summary for a creator.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator-payment"
+                ],
+                "summary": "Get Creator Earnings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "creator_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.EarningsSummary"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/{creator_id}/earnings/breakdown": {
+            "get": {
+                "description": "Get detailed earnings breakdown by series.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator-payment"
+                ],
+                "summary": "Get Earnings Breakdown",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "creator_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start Date (limit)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End Date (limit)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Series ID",
+                        "name": "series_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/{creator_id}/payout-details": {
+            "get": {
+                "description": "Get stored bank account details for payouts.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator-payment"
+                ],
+                "summary": "Get Payout Details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "creator_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PayoutDetailsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update bank account details for payouts.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator-payment"
+                ],
+                "summary": "Update Payout Details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "creator_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payout Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PayoutDetailsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.PayoutDetailsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/{creator_id}/payouts": {
+            "get": {
+                "description": "Get history of payout requests.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator-payment"
+                ],
+                "summary": "Get Payout History",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "creator_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Per Page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/{creator_id}/payouts/request": {
+            "post": {
+                "description": "Request a payout for available earnings.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator-payment"
+                ],
+                "summary": "Request Payout",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "creator_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payout Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PayoutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.PayoutResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/{id}/dashboard": {
+            "get": {
+                "description": "Get dashboard analytics and stats for a creator.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator"
+                ],
+                "summary": "Get Creator Dashboard",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreatorDashboardResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/{id}/follow": {
+            "post": {
+                "description": "Follow a creator by ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator"
+                ],
+                "summary": "Follow Creator",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Unfollow a creator by ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator"
+                ],
+                "summary": "Unfollow Creator",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/creators/{id}/following": {
+            "get": {
+                "description": "Check if the user is following a specific creator.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator"
+                ],
+                "summary": "Check Following Status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Creator ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/episodes/{id}/like": {
+            "get": {
+                "description": "Get the like status and count for an episode.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "social"
+                ],
+                "summary": "Get Like Status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Episode ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LikeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Like or unlike an episode.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "social"
+                ],
+                "summary": "Like/Unlike Episode",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Episode ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Like Action",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LikeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LikeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/me/following": {
+            "get": {
+                "description": "List creators followed by the authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "creator"
+                ],
+                "summary": "List Following",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Results per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/me/liked-episodes": {
+            "get": {
+                "description": "Get list of episodes liked by the user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "social"
+                ],
+                "summary": "Get Liked Episodes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.LikedEpisodesResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/me/watch-history": {
+            "get": {
+                "description": "Get the authenticated user's watch history.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Get Watch History",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.WatchHistoryResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/me/watchlist": {
+            "get": {
+                "description": "Get the user's watchlist.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "watchlist"
+                ],
+                "summary": "Get Watchlist",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Add a series to the user's watchlist.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "watchlist"
+                ],
+                "summary": "Add to Watchlist",
+                "parameters": [
+                    {
+                        "description": "Series ID (JSON: {series_id: string})",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/me/watchlist/{series_id}": {
+            "delete": {
+                "description": "Remove a series from the user's watchlist.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "watchlist"
+                ],
+                "summary": "Remove from Watchlist",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Series ID",
+                        "name": "series_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/me/watchlist/{series_id}/status": {
+            "get": {
+                "description": "Check if a series is in the user's watchlist.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "watchlist"
+                ],
+                "summary": "Check Watchlist Status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Series ID",
+                        "name": "series_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/payments/create-subscription": {
+            "post": {
+                "description": "Create a new subscription for a plan.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment"
+                ],
+                "summary": "Create Subscription",
+                "parameters": [
+                    {
+                        "description": "Create Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreateSubscriptionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreateSubscriptionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/profile": {
+            "get": {
+                "description": "Get the authenticated user's profile and subscription status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Get User Profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserProfileResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update the authenticated user's profile details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Update User Profile",
+                "parameters": [
+                    {
+                        "description": "Update Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UpdateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/series/{id}/rating": {
+            "post": {
+                "description": "Rate a series (1-5 stars).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "social"
+                ],
+                "summary": "Rate Series",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Series ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Rating",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RatingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RatingResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/subscriptions": {
+            "get": {
+                "description": "Get all subscriptions for the authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscription"
+                ],
+                "summary": "Get User Subscriptions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/subscriptions/check": {
+            "get": {
+                "description": "Check if the user has an active subscription.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscription"
+                ],
+                "summary": "Check Subscription Status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/subscriptions/plans": {
+            "get": {
+                "description": "Get list of available subscription plans.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscription"
+                ],
+                "summary": "Get Subscription Plans",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.SubscriptionPlan"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/subscriptions/{id}": {
+            "get": {
+                "description": "Get details of a specific subscription.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscription"
+                ],
+                "summary": "Get User Subscription Details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Subscription"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/subscriptions/{id}/cancel": {
+            "post": {
+                "description": "Cancel an active subscription.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscription"
+                ],
+                "summary": "Cancel Subscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/subscriptions/{id}/renew": {
+            "post": {
+                "description": "Renew an active or expired subscription.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscription"
+                ],
+                "summary": "Renew Subscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Subscription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/admin/login": {
+            "post": {
+                "description": "Login for admin users using username and password.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Admin Login",
+                "parameters": [
+                    {
+                        "description": "Login Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.AdminLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/create-admin": {
+            "post": {
+                "description": "Create a new admin user (Protected).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Create Admin",
+                "parameters": [
+                    {
+                        "description": "Create Admin Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreateAdminRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/firebase/exchange": {
+            "post": {
+                "description": "Exchange a Firebase ID token for application access/refresh tokens.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Exchange Firebase ID Token",
+                "parameters": [
+                    {
+                        "description": "Exchange Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseExchangeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/firebase/otp/send": {
+            "post": {
+                "description": "Sends an OTP to the given phone number using Firebase Identity Toolkit.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Send OTP via Firebase",
+                "parameters": [
+                    {
+                        "description": "OTP Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseSendOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseSendOTPResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/firebase/otp/verify": {
+            "post": {
+                "description": "Verifies the OTP sent via Firebase and returns access tokens.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verify Firebase OTP",
+                "parameters": [
+                    {
+                        "description": "Verify Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.FirebaseVerifyOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/otp/send": {
+            "post": {
+                "description": "Deprecated: Use /auth/firebase/otp/send instead.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Send OTP (Deprecated)",
+                "parameters": [
+                    {
+                        "description": "OTP Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PhoneOtpRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PhoneOtpSendResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/otp/verify": {
+            "post": {
+                "description": "Deprecated: Use /auth/firebase/otp/verify instead.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verify OTP (Deprecated)",
+                "parameters": [
+                    {
+                        "description": "Verify Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.PhoneOtpVerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/recaptcha/site-key": {
+            "get": {
+                "description": "Returns the reCAPTCHA site key for the client.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get Recaptcha Site Key",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RecaptchaSiteKeyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "description": "Use a refresh token to get a new access token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh Access Token",
+                "parameters": [
+                    {
+                        "description": "Refresh Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/content/episodes/{id}/status": {
+            "put": {
+                "description": "Update the status of an episode.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "content"
+                ],
+                "summary": "Update Episode Status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Episode ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UpdateEpisodeStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/content/series": {
             "get": {
                 "description": "Get a list of series with optional filtering",
@@ -227,6 +2933,329 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "put": {
+                "description": "Update series details.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "content"
+                ],
+                "summary": "Update Series",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Series ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UpdateSeriesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/content/series/{id}/episodes": {
+            "post": {
+                "description": "Create a new episode for a series.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "content"
+                ],
+                "summary": "Create Episode",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Series ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Create Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreateEpisodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Episode"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/content/upload-url": {
+            "post": {
+                "description": "Request a presigned URL for uploading content (video/thumbnail).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "content"
+                ],
+                "summary": "Request Upload URL",
+                "parameters": [
+                    {
+                        "description": "Upload Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UploadUrlRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UploadUrlResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/content/uploads/{upload_id}/notify": {
+            "post": {
+                "description": "Notify the server that a file upload has completed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "content"
+                ],
+                "summary": "Notify Upload Complete",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Upload ID",
+                        "name": "upload_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Notify Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UploadNotifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UploadNotifyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/episodes/{id}/manifest": {
+            "get": {
+                "description": "Get the HLS manifest or video URL for an episode.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "content"
+                ],
+                "summary": "Get Episode Manifest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Episode ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ManifestResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/webhook": {
+            "post": {
+                "description": "Handle payment webhooks from Razorpay.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment"
+                ],
+                "summary": "Payment Webhook",
+                "parameters": [
+                    {
+                        "description": "Webhook Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.WebhookRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.WebhookResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
             }
         }
     },
@@ -240,6 +3269,114 @@ const docTemplate = `{
                 "valid": {
                     "description": "Valid is true if Time is not NULL",
                     "type": "boolean"
+                }
+            }
+        },
+        "handlers.AdminCreateSeriesRequest": {
+            "type": "object",
+            "properties": {
+                "category_tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "creator_id": {
+                    "type": "string"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "price_amount": {
+                    "type": "number"
+                },
+                "price_type": {
+                    "type": "string"
+                },
+                "synopsis": {
+                    "type": "string"
+                },
+                "thumbnail_url": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.AdminLoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.ApproveContentRequest": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "\"approve\" or \"reject\"",
+                    "type": "string"
+                },
+                "notes": {
+                    "description": "Optional admin notes",
+                    "type": "string"
+                },
+                "reason": {
+                    "description": "Required if action is \"reject\"",
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.ApproveContentResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "admin_id": {
+                    "type": "string"
+                },
+                "processed_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.CreateAdminRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.CreateEpisodeRequest": {
+            "type": "object",
+            "properties": {
+                "duration_seconds": {
+                    "type": "integer"
+                },
+                "episode_number": {
+                    "type": "integer"
+                },
+                "season_number": {
+                    "type": "integer"
+                },
+                "thumb_url": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },
@@ -268,6 +3405,170 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.CreateSubscriptionRequest": {
+            "type": "object",
+            "properties": {
+                "auto_renew": {
+                    "type": "boolean"
+                },
+                "plan_id": {
+                    "type": "string"
+                },
+                "target_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.CreateSubscriptionResponse": {
+            "type": "object",
+            "properties": {
+                "checkout_url": {
+                    "type": "string"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "next_billing": {
+                    "type": "string"
+                },
+                "plan_id": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "subscription_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.CreatorContentResponse": {
+            "type": "object",
+            "properties": {
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.CreatorSeriesResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.CreatorDashboardResponse": {
+            "type": "object",
+            "properties": {
+                "earnings": {
+                    "type": "number"
+                },
+                "follower_count": {
+                    "type": "integer"
+                },
+                "views": {
+                    "type": "integer"
+                },
+                "watch_time_seconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.CreatorEpisodeResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "duration_seconds": {
+                    "type": "integer"
+                },
+                "episode_number": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.CreatorOnboardRequest": {
+            "type": "object",
+            "properties": {
+                "bio": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "kyc_document_s3_path": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.CreatorSeriesResponse": {
+            "type": "object",
+            "properties": {
+                "category_tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "episode_count": {
+                    "type": "integer"
+                },
+                "episodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.CreatorEpisodeResponse"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "price_amount": {
+                    "type": "number"
+                },
+                "price_type": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "synopsis": {
+                    "type": "string"
+                },
+                "thumbnail_url": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -304,6 +3605,249 @@ const docTemplate = `{
                 },
                 "view_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "handlers.FirebaseExchangeRequest": {
+            "type": "object",
+            "properties": {
+                "id_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.FirebaseSendOTPRequest": {
+            "type": "object",
+            "properties": {
+                "phone": {
+                    "type": "string"
+                },
+                "recaptcha_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.FirebaseSendOTPResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "session_info": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.FirebaseVerifyOTPRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "session_info": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.LikeRequest": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "\"like\" or \"unlike\" (legacy format)",
+                    "type": "string"
+                },
+                "like": {
+                    "description": "true = like, false = unlike (new format)",
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.LikeResponse": {
+            "type": "object",
+            "properties": {
+                "is_liked": {
+                    "type": "boolean"
+                },
+                "like_count": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.LikedEpisodeItem": {
+            "type": "object",
+            "properties": {
+                "episode_id": {
+                    "type": "string"
+                },
+                "episode_number": {
+                    "type": "integer"
+                },
+                "episode_title": {
+                    "type": "string"
+                },
+                "like_count": {
+                    "type": "integer"
+                },
+                "liked_at": {
+                    "type": "string"
+                },
+                "series_id": {
+                    "type": "string"
+                },
+                "series_title": {
+                    "type": "string"
+                },
+                "thumbnail_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.LikedEpisodesResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.LikedEpisodeItem"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.ManifestResponse": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "manifest_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.PendingUpload": {
+            "type": "object",
+            "properties": {
+                "content_type": {
+                    "type": "string"
+                },
+                "creator_id": {
+                    "type": "string"
+                },
+                "episode_id": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "series_id": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "uploaded_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.PendingUploadsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.PendingUpload"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.PhoneOtpRequest": {
+            "type": "object",
+            "properties": {
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.PhoneOtpSendResponse": {
+            "type": "object",
+            "properties": {
+                "expires_in": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "txn_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.PhoneOtpVerifyRequest": {
+            "type": "object",
+            "properties": {
+                "otp": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.RatingRequest": {
+            "type": "object",
+            "properties": {
+                "rating": {
+                    "description": "1-5 stars",
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.RatingResponse": {
+            "type": "object",
+            "properties": {
+                "average_rating": {
+                    "type": "number"
+                },
+                "rating": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_ratings": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.RecaptchaSiteKeyResponse": {
+            "type": "object",
+            "properties": {
+                "site_key": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.RefreshRequest": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
                 }
             }
         },
@@ -448,6 +3992,274 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "type": "integer"
+                },
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.UpdateEpisodeStatusRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.UpdateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.UpdateSeriesRequest": {
+            "type": "object",
+            "properties": {
+                "category_tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language": {
+                    "type": "string"
+                },
+                "price_amount": {
+                    "type": "number"
+                },
+                "price_type": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "synopsis": {
+                    "type": "string"
+                },
+                "thumbnail_url": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.UploadNotifyRequest": {
+            "type": "object",
+            "properties": {
+                "episode_id": {
+                    "description": "Optional: link upload to episode",
+                    "type": "string"
+                },
+                "s3_path": {
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.UploadNotifyResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.UploadUrlRequest": {
+            "type": "object",
+            "properties": {
+                "content_type": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "size_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.UploadUrlResponse": {
+            "type": "object",
+            "properties": {
+                "expires_in": {
+                    "type": "integer"
+                },
+                "presigned_url": {
+                    "type": "string"
+                },
+                "upload_headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "upload_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.UserProfileResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "is_subscribed": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "plan_name": {
+                    "type": "string"
+                },
+                "subscription_expires_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.WatchEventRequest": {
+            "type": "object",
+            "properties": {
+                "episode_id": {
+                    "type": "string"
+                },
+                "watched_seconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.WatchHistoryItem": {
+            "type": "object",
+            "properties": {
+                "episode_id": {
+                    "type": "string"
+                },
+                "episode_number": {
+                    "type": "integer"
+                },
+                "episode_title": {
+                    "type": "string"
+                },
+                "first_watched_at": {
+                    "type": "string"
+                },
+                "series_id": {
+                    "type": "string"
+                },
+                "series_title": {
+                    "type": "string"
+                },
+                "thumbnail_url": {
+                    "type": "string"
+                },
+                "watched_seconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.WatchHistoryResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.WatchHistoryItem"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.WatchResponse": {
+            "type": "object",
+            "properties": {
+                "first_watch": {
+                    "type": "boolean"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tracked": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.WebhookRequest": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "event_type": {
+                    "type": "string"
+                },
+                "signature": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.WebhookResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AdRevenueBreakdown": {
+            "type": "object",
+            "properties": {
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
+        "models.CreatorDetails": {
+            "type": "object",
+            "properties": {
+                "bio": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "follower_count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kyc_status": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "number"
+                }
+            }
+        },
         "models.CreatorProfile": {
             "type": "object",
             "properties": {
@@ -498,6 +4310,64 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "models.EarningsBreakdown": {
+            "type": "object",
+            "properties": {
+                "ad_revenue": {
+                    "$ref": "#/definitions/models.AdRevenueBreakdown"
+                },
+                "one_time_purchases": {
+                    "$ref": "#/definitions/models.OneTimePurchaseBreakdown"
+                },
+                "subscription_revenue": {
+                    "$ref": "#/definitions/models.SubscriptionRevenueBreakdown"
+                }
+            }
+        },
+        "models.EarningsSummary": {
+            "type": "object",
+            "properties": {
+                "available_for_payout": {
+                    "type": "number"
+                },
+                "breakdown": {
+                    "$ref": "#/definitions/models.EarningsBreakdown"
+                },
+                "can_request_payout": {
+                    "type": "boolean"
+                },
+                "creator_details": {
+                    "$ref": "#/definitions/models.CreatorDetails"
+                },
+                "creator_id": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "last_payout_date": {
+                    "type": "string"
+                },
+                "minimum_threshold": {
+                    "type": "number"
+                },
+                "next_payout_date": {
+                    "type": "string"
+                },
+                "paid_earnings": {
+                    "type": "number"
+                },
+                "payout_details": {
+                    "$ref": "#/definitions/models.PayoutDetailsInfo"
+                },
+                "pending_earnings": {
+                    "type": "number"
+                },
+                "total_earnings": {
+                    "type": "number"
                 }
             }
         },
@@ -565,6 +4435,17 @@ const docTemplate = `{
                 }
             }
         },
+        "models.OneTimePurchaseBreakdown": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
         "models.PayoutDetails": {
             "type": "object",
             "properties": {
@@ -609,6 +4490,107 @@ const docTemplate = `{
                 },
                 "verified": {
                     "type": "boolean"
+                }
+            }
+        },
+        "models.PayoutDetailsInfo": {
+            "type": "object",
+            "properties": {
+                "account_holder_name": {
+                    "type": "string"
+                },
+                "account_number": {
+                    "type": "string"
+                },
+                "account_type": {
+                    "type": "string"
+                },
+                "bank_name": {
+                    "type": "string"
+                },
+                "ifsc_code": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "upi_id": {
+                    "type": "string"
+                },
+                "verified": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.PayoutDetailsRequest": {
+            "type": "object",
+            "properties": {
+                "account_holder_name": {
+                    "type": "string"
+                },
+                "account_number": {
+                    "type": "string"
+                },
+                "account_type": {
+                    "description": "savings, current",
+                    "type": "string"
+                },
+                "bank_name": {
+                    "type": "string"
+                },
+                "ifsc_code": {
+                    "type": "string"
+                },
+                "upi_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PayoutDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "creator_id": {
+                    "type": "string"
+                },
+                "payout_details": {
+                    "$ref": "#/definitions/models.PayoutDetailsInfo"
+                }
+            }
+        },
+        "models.PayoutRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "payout_method": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PayoutResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "creator_id": {
+                    "type": "string"
+                },
+                "estimated_completion": {
+                    "type": "string"
+                },
+                "payout_id": {
+                    "type": "string"
+                },
+                "razorpay_payout_id": {
+                    "type": "string"
+                },
+                "requested_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -673,6 +4655,121 @@ const docTemplate = `{
                 },
                 "view_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "models.Subscription": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "auto_renew": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "current_period_end": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "plan": {
+                    "$ref": "#/definitions/models.SubscriptionPlan"
+                },
+                "plan_id": {
+                    "type": "string"
+                },
+                "razorpay_subscription_id": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "target_type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user": {
+                    "description": "Relationships",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    ]
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SubscriptionPlan": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "duration": {
+                    "description": "Duration in days",
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "razorpay_plan_id": {
+                    "description": "Maps to Razorpay plan ID",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SubscriptionRevenueBreakdown": {
+            "type": "object",
+            "properties": {
+                "active_subscriptions": {
+                    "type": "integer"
+                },
+                "monthly_recurring": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
                 }
             }
         },

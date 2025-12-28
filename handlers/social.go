@@ -60,6 +60,17 @@ type LikedEpisodesResponse struct {
 
 // GetLikeStatus returns the like status for an episode
 // GET /api/episodes/{id}/like
+// GetLikeStatus godoc
+// @Summary Get Like Status
+// @Description Get the like status and count for an episode.
+// @Tags social
+// @Produce  json
+// @Param   id   path     string  true  "Episode ID"
+// @Success 200 {object} LikeResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/episodes/{id}/like [get]
 func (h *SocialHandler) GetLikeStatus(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
 	userID, ok := r.Context().Value("user_id").(string)
@@ -103,6 +114,18 @@ func (h *SocialHandler) GetLikeStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // LikeEpisode handles episode likes/unlikes
+// LikeEpisode godoc
+// @Summary Like/Unlike Episode
+// @Description Like or unlike an episode.
+// @Tags social
+// @Accept  json
+// @Produce  json
+// @Param   id       path     string       true  "Episode ID"
+// @Param   request  body     LikeRequest  true  "Like Action"
+// @Success 200 {object} LikeResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/episodes/{id}/like [post]
 func (h *SocialHandler) LikeEpisode(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
 	userID, ok := r.Context().Value("user_id").(string)
@@ -192,6 +215,18 @@ func (h *SocialHandler) LikeEpisode(w http.ResponseWriter, r *http.Request) {
 }
 
 // RateSeries handles series ratings (1-5 stars)
+// RateSeries godoc
+// @Summary Rate Series
+// @Description Rate a series (1-5 stars).
+// @Tags social
+// @Accept  json
+// @Produce  json
+// @Param   id       path     string         true  "Series ID"
+// @Param   request  body     RatingRequest  true  "Rating"
+// @Success 200 {object} RatingResponse
+// @Failure 400 {string} string "Bad Request"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/series/{id}/rating [post]
 func (h *SocialHandler) RateSeries(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
 	userID, ok := r.Context().Value("user_id").(string)
@@ -270,6 +305,14 @@ func (h *SocialHandler) RateSeries(w http.ResponseWriter, r *http.Request) {
 
 // GetLikedEpisodes returns all episodes liked by the authenticated user
 // GET /api/me/liked-episodes
+// GetLikedEpisodes godoc
+// @Summary Get Liked Episodes
+// @Description Get list of episodes liked by the user.
+// @Tags social
+// @Produce  json
+// @Success 200 {object} LikedEpisodesResponse
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/me/liked-episodes [get]
 func (h *SocialHandler) GetLikedEpisodes(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
 	userID, ok := r.Context().Value("user_id").(string)

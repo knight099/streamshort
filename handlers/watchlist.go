@@ -21,6 +21,19 @@ func NewWatchListHandler(db *gorm.DB) *WatchListHandler {
 // AddToWatchList adds a series to the user's watch list
 // POST /api/me/watchlist
 // Body: { "series_id": "uuid" }
+// AddToWatchList godoc
+// @Summary Add to Watchlist
+// @Description Add a series to the user's watchlist.
+// @Tags watchlist
+// @Accept  json
+// @Produce  json
+// @Param   request  body     map[string]string  true  "Series ID (JSON: {series_id: string})"
+// @Success 201 {object} map[string]string
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 404 {string} string "Not Found"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/me/watchlist [post]
 func (h *WatchListHandler) AddToWatchList(w http.ResponseWriter, r *http.Request) {
 	userIDAny := r.Context().Value("user_id")
 	if userIDAny == nil {
@@ -69,6 +82,17 @@ func (h *WatchListHandler) AddToWatchList(w http.ResponseWriter, r *http.Request
 
 // RemoveFromWatchList removes a series from the user's watch list
 // DELETE /api/me/watchlist/{series_id}
+// RemoveFromWatchList godoc
+// @Summary Remove from Watchlist
+// @Description Remove a series from the user's watchlist.
+// @Tags watchlist
+// @Produce  json
+// @Param   series_id  path     string  true  "Series ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/me/watchlist/{series_id} [delete]
 func (h *WatchListHandler) RemoveFromWatchList(w http.ResponseWriter, r *http.Request) {
 	userIDAny := r.Context().Value("user_id")
 	if userIDAny == nil {
@@ -96,6 +120,15 @@ func (h *WatchListHandler) RemoveFromWatchList(w http.ResponseWriter, r *http.Re
 
 // GetWatchList returns the user's watch list
 // GET /api/me/watchlist
+// GetWatchList godoc
+// @Summary Get Watchlist
+// @Description Get the user's watchlist.
+// @Tags watchlist
+// @Produce  json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /api/me/watchlist [get]
 func (h *WatchListHandler) GetWatchList(w http.ResponseWriter, r *http.Request) {
 	userIDAny := r.Context().Value("user_id")
 	if userIDAny == nil {
@@ -132,6 +165,16 @@ func (h *WatchListHandler) GetWatchList(w http.ResponseWriter, r *http.Request) 
 
 // CheckWatchListStatus checks if a specific series is in the user's watchlist
 // GET /api/me/watchlist/{series_id}/status
+// CheckWatchListStatus godoc
+// @Summary Check Watchlist Status
+// @Description Check if a series is in the user's watchlist.
+// @Tags watchlist
+// @Produce  json
+// @Param   series_id  path     string  true  "Series ID"
+// @Success 200 {object} map[string]bool
+// @Failure 400 {string} string "Bad Request"
+// @Failure 401 {string} string "Unauthorized"
+// @Router /api/me/watchlist/{series_id}/status [get]
 func (h *WatchListHandler) CheckWatchListStatus(w http.ResponseWriter, r *http.Request) {
 	userIDAny := r.Context().Value("user_id")
 	if userIDAny == nil {
