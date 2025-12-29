@@ -841,6 +841,14 @@ func (h *ContentHandler) RequestUploadURL(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := h.db.Create(&uploadReq).Error; err != nil {
+		// Log detailed error for debugging
+		fmt.Printf("ERROR: Failed to create upload request: %v\n", err)
+		fmt.Printf("Upload request details: UserID=%s, Filename=%s, ContentType=%s, SizeBytes=%d, FileType=%s\n",
+			userID, req.Filename, req.ContentType, req.SizeBytes, fileType)
+		if req.Metadata != nil {
+			metaJSON, _ := json.Marshal(req.Metadata)
+			fmt.Printf("Metadata: %s\n", string(metaJSON))
+		}
 		http.Error(w, "Failed to create upload request", http.StatusInternalServerError)
 		return
 	}
