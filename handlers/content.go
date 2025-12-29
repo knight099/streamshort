@@ -1247,6 +1247,7 @@ type CreatorSeriesResponse struct {
 type CreatorEpisodeResponse struct {
 	ID              string     `json:"id"`
 	Title           string     `json:"title"`
+	SeasonNumber    int        `json:"season_number"`
 	EpisodeNumber   int        `json:"episode_number"`
 	DurationSeconds int        `json:"duration_seconds"`
 	Status          string     `json:"status"`
@@ -1309,6 +1310,7 @@ func (h *ContentHandler) GetCreatorContent(w http.ResponseWriter, r *http.Reques
 			episodeResponses = append(episodeResponses, CreatorEpisodeResponse{
 				ID:              ep.ID,
 				Title:           ep.Title,
+				SeasonNumber:    ep.SeasonNumber,
 				EpisodeNumber:   ep.EpisodeNumber,
 				DurationSeconds: ep.DurationSeconds,
 				Status:          ep.Status,
