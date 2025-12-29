@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -191,13 +192,21 @@ func (s *AWSService) GenerateCloudFrontSignedURL(resourcePath string, expiresIn 
 	}
 
 	expiresAt := time.Now().Add(expiresIn)
-	url := fmt.Sprintf("https://%s/%s", s.cloudFrontDomain, resourcePath)
+
+	// URL encode each path segment to handle special characters (Hindi, emojis, etc.)
+	pathParts := strings.Split(resourcePath, "/")
+	for i, part := range pathParts {
+		pathParts[i] = url.PathEscape(part)
+	}
+	encodedPath := strings.Join(pathParts, "/")
+
+	resourceURL := fmt.Sprintf("https://%s/%s", s.cloudFrontDomain, encodedPath)
 
 	// Create CloudFront signer using AWS SDK v2
 	signer := sign.NewURLSigner(s.cloudFrontKeyPairID, s.cloudFrontPrivateKey)
 
 	// Sign the URL with expiration (canned policy)
-	signedURL, err := signer.Sign(url, expiresAt)
+	signedURL, err := signer.Sign(resourceURL, expiresAt)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to sign CloudFront URL: %w", err)
 	}
