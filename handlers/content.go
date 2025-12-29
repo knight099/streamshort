@@ -975,7 +975,7 @@ func (h *ContentHandler) NotifyUploadComplete(w http.ResponseWriter, r *http.Req
 						// Format: https://bucket-name.s3.region.amazonaws.com/key
 						key := h.aws.ExtractS3Key(req.S3Path)
 						if key != "" {
-							thumbnailURL = fmt.Sprintf("https://%s.s3.amazonaws.com/%s", h.aws.GetBucket(), key)
+							thumbnailURL = fmt.Sprintf("https://%s/%s", h.aws.GetCloudFrontDomain(), key)
 						}
 					}
 

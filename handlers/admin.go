@@ -563,7 +563,7 @@ func (h *AdminHandler) AdminNotifyUploadComplete(w http.ResponseWriter, r *http.
 				if h.aws != nil && h.aws.IsConfigured() {
 					key := h.aws.ExtractS3Key(req.S3Path)
 					if key != "" {
-						url = fmt.Sprintf("https://%s.s3.amazonaws.com/%s", h.aws.GetBucket(), key)
+						url = fmt.Sprintf("https://%s/%s", h.aws.GetCloudFrontDomain(), key)
 					}
 				}
 				h.db.Model(&models.Series{}).Where("id = ?", seriesID).Update("thumbnail_url", url)
