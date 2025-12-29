@@ -1010,9 +1010,17 @@ func (h *ContentHandler) NotifyUploadComplete(w http.ResponseWriter, r *http.Req
 			First(&episode).Error
 
 		if err == nil {
-			// Update episode with the S3 path
+			// Compute the expected S3 path server-side (matches presigned URL key)
+			// This prevents 403 errors from path mismatches with original filenames
+			s3PathToStore := req.S3Path // Fallback for dev/mock
+			if h.aws != nil && h.aws.IsConfigured() {
+				expectedKey := h.aws.GetExpectedS3Key(uploadID, uploadReq.Filename, uploadReq.FileType)
+				s3PathToStore = fmt.Sprintf("s3://%s/%s", h.aws.GetBucket(), expectedKey)
+			}
+
+			// Update episode with the computed S3 path
 			if err := h.db.Model(&episode).Updates(map[string]interface{}{
-				"s3_master_path": req.S3Path,
+				"s3_master_path": s3PathToStore,
 				"status":         "queued_transcode",
 				"updated_at":     time.Now(),
 			}).Error; err != nil {

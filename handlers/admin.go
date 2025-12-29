@@ -570,8 +570,16 @@ func (h *AdminHandler) AdminNotifyUploadComplete(w http.ResponseWriter, r *http.
 			}
 		}
 	} else if req.EpisodeID != "" {
+		// Compute expected S3 path server-side for video uploads
+		// This prevents 403 errors from path mismatches with original filenames
+		s3PathToStore := req.S3Path // Fallback for dev/mock
+		if h.aws != nil && h.aws.IsConfigured() {
+			expectedKey := h.aws.GetExpectedS3Key(uploadID, uploadReq.Filename, uploadReq.FileType)
+			s3PathToStore = fmt.Sprintf("s3://%s/%s", h.aws.GetBucket(), expectedKey)
+		}
+
 		h.db.Model(&models.Episode{}).Where("id = ?", req.EpisodeID).Updates(map[string]interface{}{
-			"s3_master_path": req.S3Path,
+			"s3_master_path": s3PathToStore,
 			"status":         "queued_transcode", // Assume transcoding is needed
 			"updated_at":     time.Now(),
 		})

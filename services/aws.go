@@ -185,6 +185,30 @@ func (s *AWSService) GetS3PathWithType(uploadID, filename, fileType string) stri
 	return fmt.Sprintf("s3://%s/%s/%s/%s", s.bucket, prefix, uploadID, sanitizedFilename)
 }
 
+// GetExpectedS3Key returns the expected S3 key for an upload based on uploadID and filename
+// This matches the key used in GenerateUploadPresignedURLWithType
+func (s *AWSService) GetExpectedS3Key(uploadID, filename, fileType string) string {
+	var prefix string
+	switch fileType {
+	case "thumbnail":
+		prefix = "thumbnails"
+	case "caption":
+		prefix = "captions"
+	default:
+		prefix = "uploads"
+	}
+
+	// Extract file extension from original filename
+	ext := ".mp4" // default extension
+	if idx := strings.LastIndex(filename, "."); idx != -1 {
+		ext = filename[idx:]
+	}
+
+	// Use sanitized filename: uploadID + extension (matches presigned URL generation)
+	sanitizedFilename := uploadID + ext
+	return fmt.Sprintf("%s/%s/%s", prefix, uploadID, sanitizedFilename)
+}
+
 // GenerateCloudFrontSignedURL generates a signed URL for CloudFront streaming
 func (s *AWSService) GenerateCloudFrontSignedURL(resourcePath string, expiresIn time.Duration) (string, time.Time, error) {
 	if s.cloudFrontPrivateKey == nil || s.cloudFrontKeyPairID == "" || s.cloudFrontDomain == "" {
