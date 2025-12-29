@@ -211,7 +211,21 @@ func (s *AWSService) GenerateCloudFrontSignedURL(resourcePath string, expiresIn 
 		return "", time.Time{}, fmt.Errorf("failed to sign CloudFront URL: %w", err)
 	}
 
+	// Debug logging for troubleshooting 403 errors
+	fmt.Printf("[CloudFront Debug] KeyPairID: %s, Domain: %s\n", s.cloudFrontKeyPairID, s.cloudFrontDomain)
+	fmt.Printf("[CloudFront Debug] Resource path: %s\n", resourcePath)
+	fmt.Printf("[CloudFront Debug] Encoded URL: %s\n", resourceURL)
+	fmt.Printf("[CloudFront Debug] Expires at: %s (Unix: %d)\n", expiresAt.Format(time.RFC3339), expiresAt.Unix())
+
 	return signedURL, expiresAt, nil
+}
+
+// GetCloudFrontKeyPairID returns the configured key pair ID for debugging
+func (s *AWSService) GetCloudFrontKeyPairID() string {
+	if s == nil {
+		return ""
+	}
+	return s.cloudFrontKeyPairID
 }
 
 // GenerateManifestURL generates a signed URL for HLS manifest access

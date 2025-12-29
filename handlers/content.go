@@ -1104,10 +1104,12 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 	// Check if we have HLS manifest URL (transcoded content)
 	if episode.HLSManifestURL != nil && *episode.HLSManifestURL != "" {
 		// Use transcoded HLS manifest
+		fmt.Printf("[Manifest] Episode %s has HLS manifest, generating signed URL\n", episodeID)
 		if h.aws != nil && h.aws.IsCloudFrontConfigured() {
 			var err error
 			videoURL, expiresAt, err = h.aws.GenerateManifestURL(episodeID, expiresIn)
 			if err != nil {
+				fmt.Printf("[Manifest Error] Failed to generate manifest URL: %v\n", err)
 				http.Error(w, "Failed to generate manifest URL", http.StatusInternalServerError)
 				return
 			}
@@ -1116,6 +1118,9 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 			videoURL = *episode.HLSManifestURL
 		}
 	} else if episode.S3MasterPath != nil && *episode.S3MasterPath != "" {
+		// No HLS yet - serve the raw MP4 via CloudFront (fallback for untranscoded content)
+		fmt.Printf("[Manifest] Episode %s has no HLS manifest yet, falling back to raw MP4\n", episodeID)
+		fmt.Printf("[Manifest] WARNING: Raw MP4 playback may not work if CloudFront 'uploads/*' behavior is not configured for signed URLs\n")
 		// No HLS yet - serve the raw MP4 via CloudFront (for development)
 		// Extract the path from s3://bucket/path format
 		s3Path := *episode.S3MasterPath
@@ -1135,15 +1140,17 @@ func (h *ContentHandler) GetEpisodeManifest(w http.ResponseWriter, r *http.Reque
 			// Ensure object path is properly URL encoded if needed, but AWS SDK might handle signing correctly
 			// For now, let's just pass the path.
 			// Debug log (in production use proper logger)
-			fmt.Printf("Generating CloudFront URL for path: %s\n", objectPath)
+			fmt.Printf("[Manifest] Generating CloudFront URL for raw MP4 path: %s\n", objectPath)
 
 			if h.aws != nil && h.aws.IsCloudFrontConfigured() {
 				var err error
 				videoURL, expiresAt, err = h.aws.GenerateCloudFrontSignedURL(objectPath, expiresIn)
 				if err != nil {
+					fmt.Printf("[Manifest Error] Failed to generate CloudFront signed URL: %v\n", err)
 					http.Error(w, "Failed to generate video URL", http.StatusInternalServerError)
 					return
 				}
+				fmt.Printf("[Manifest] Successfully generated signed URL for raw MP4\n")
 			} else {
 				// Fallback: direct CloudFront URL without signing (for dev)
 				expiresAt = time.Now().Add(expiresIn)

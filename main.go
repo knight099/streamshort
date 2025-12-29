@@ -23,6 +23,7 @@ import (
 	"streamshort/middleware"
 	"streamshort/services"
 	"strings"
+	"time"
 
 	_ "streamshort/docs"
 
@@ -109,6 +110,53 @@ func main() {
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(Response{Message: "Server is running!"})
+	}).Methods("GET")
+
+	// Debug endpoint for CloudFront signed URL testing (remove in production)
+	r.HandleFunc("/debug/cloudfront", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		if awsService == nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "AWS service not initialized",
+				"message": "Check AWS credentials configuration",
+			})
+			return
+		}
+
+		if !awsService.IsCloudFrontConfigured() {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   "CloudFront not configured",
+				"message": "Check AWS_CLOUDFRONT_KEY_PAIR_ID and AWS_CLOUDFRONT_PRIVATE_KEY",
+			})
+			return
+		}
+
+		// Test path - use query param or default
+		testPath := r.URL.Query().Get("path")
+		if testPath == "" {
+			testPath = "transcoded/test/index.m3u8"
+		}
+
+		signedURL, expiresAt, err := awsService.GenerateCloudFrontSignedURL(testPath, 1*time.Hour)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":   err.Error(),
+				"message": "Failed to generate signed URL",
+			})
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":       "ok",
+			"key_pair_id":  awsService.GetCloudFrontKeyPairID(),
+			"domain":       awsService.GetCloudFrontDomain(),
+			"test_path":    testPath,
+			"signed_url":   signedURL,
+			"expires_at":   expiresAt.Format(time.RFC3339),
+			"expires_unix": expiresAt.Unix(),
+			"instructions": "Test this URL with: curl -v 'SIGNED_URL_HERE'",
+		})
 	}).Methods("GET")
 
 	// Swagger documentation
