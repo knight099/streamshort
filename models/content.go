@@ -39,7 +39,13 @@ func (j JSONB) Value() (driver.Value, error) {
 	if j == nil {
 		return nil, nil
 	}
-	return json.Marshal(j)
+	// Marshal to JSON bytes first
+	bytes, err := json.Marshal(j)
+	if err != nil {
+		return nil, err
+	}
+	// Return as string - PostgreSQL's json/jsonb driver expects string, not []byte
+	return string(bytes), nil
 }
 
 // Series represents a video series
