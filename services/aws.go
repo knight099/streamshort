@@ -133,7 +133,16 @@ func (s *AWSService) GenerateUploadPresignedURLWithType(ctx context.Context, upl
 		prefix = "uploads"
 	}
 
-	key := fmt.Sprintf("%s/%s/%s", prefix, uploadID, filename)
+	// Extract file extension from original filename
+	ext := ".mp4" // default extension
+	if idx := strings.LastIndex(filename, "."); idx != -1 {
+		ext = filename[idx:]
+	}
+
+	// Use sanitized filename: uploadID + extension
+	// This avoids issues with special characters (Hindi, emojis, etc.) in S3/CloudFront URLs
+	sanitizedFilename := uploadID + ext
+	key := fmt.Sprintf("%s/%s/%s", prefix, uploadID, sanitizedFilename)
 
 	presignedReq, err := s.s3PresignClient.PresignPutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
@@ -163,7 +172,16 @@ func (s *AWSService) GetS3PathWithType(uploadID, filename, fileType string) stri
 	default:
 		prefix = "uploads"
 	}
-	return fmt.Sprintf("s3://%s/%s/%s/%s", s.bucket, prefix, uploadID, filename)
+
+	// Extract file extension from original filename
+	ext := ".mp4" // default extension
+	if idx := strings.LastIndex(filename, "."); idx != -1 {
+		ext = filename[idx:]
+	}
+
+	// Use sanitized filename: uploadID + extension
+	sanitizedFilename := uploadID + ext
+	return fmt.Sprintf("s3://%s/%s/%s/%s", s.bucket, prefix, uploadID, sanitizedFilename)
 }
 
 // GenerateCloudFrontSignedURL generates a signed URL for CloudFront streaming
