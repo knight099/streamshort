@@ -17,6 +17,35 @@ CREATE TABLE IF NOT EXISTS upload_requests (
     CONSTRAINT fk_upload_requests_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Ensure metadata column is JSONB type (convert from json if needed)
+DO $$
+BEGIN
+    -- Check if metadata column exists and is of type json (not jsonb)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'upload_requests' 
+        AND column_name = 'metadata' 
+        AND data_type = 'json'
+    ) THEN
+        -- Convert json to jsonb
+        ALTER TABLE upload_requests 
+        ALTER COLUMN metadata TYPE JSONB USING metadata::jsonb;
+        RAISE NOTICE 'Converted metadata column from json to jsonb';
+    END IF;
+END $$;
+
+-- Ensure metadata column exists with JSONB type if not present
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'upload_requests' 
+        AND column_name = 'metadata'
+    ) THEN
+        ALTER TABLE upload_requests ADD COLUMN metadata JSONB;
+    END IF;
+END $$;
+
 -- Create index on deleted_at for soft delete queries
 CREATE INDEX IF NOT EXISTS idx_upload_requests_deleted_at ON upload_requests(deleted_at);
 
