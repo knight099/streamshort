@@ -1250,6 +1250,7 @@ type CreatorEpisodeResponse struct {
 	SeasonNumber    int        `json:"season_number"`
 	EpisodeNumber   int        `json:"episode_number"`
 	DurationSeconds int        `json:"duration_seconds"`
+	ThumbURL        *string    `json:"thumb_url"`
 	Status          string     `json:"status"`
 	PublishedAt     *time.Time `json:"published_at"`
 	CreatedAt       time.Time  `json:"created_at"`
@@ -1313,6 +1314,7 @@ func (h *ContentHandler) GetCreatorContent(w http.ResponseWriter, r *http.Reques
 				SeasonNumber:    ep.SeasonNumber,
 				EpisodeNumber:   ep.EpisodeNumber,
 				DurationSeconds: ep.DurationSeconds,
+				ThumbURL:        ep.ThumbURL,
 				Status:          ep.Status,
 				PublishedAt:     ep.PublishedAt,
 				CreatedAt:       ep.CreatedAt,
