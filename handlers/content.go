@@ -1523,6 +1523,7 @@ func (h *ContentHandler) UpdateSeriesStatus(w http.ResponseWriter, r *http.Reque
 
 type UpdateEpisodeRequest struct {
 	Title           *string `json:"title"`
+	SeasonNumber    *int    `json:"season_number"`
 	EpisodeNumber   *int    `json:"episode_number"`
 	DurationSeconds *int    `json:"duration_seconds"`
 	ThumbURL        *string `json:"thumb_url"`
@@ -1571,21 +1572,33 @@ func (h *ContentHandler) UpdateEpisode(w http.ResponseWriter, r *http.Request) {
 		}
 		updates["duration_seconds"] = *req.DurationSeconds
 	}
+	if req.SeasonNumber != nil {
+		if *req.SeasonNumber <= 0 {
+			http.Error(w, "season_number must be > 0", http.StatusBadRequest)
+			return
+		}
+		updates["season_number"] = *req.SeasonNumber
+	}
 	if req.EpisodeNumber != nil {
 		if *req.EpisodeNumber <= 0 {
 			http.Error(w, "episode_number must be > 0", http.StatusBadRequest)
 			return
 		}
-		// Ensure uniqueness within the same series
+		// Determine the season_number to check (use new value if provided, else current)
+		seasonToCheck := episode.SeasonNumber
+		if req.SeasonNumber != nil {
+			seasonToCheck = *req.SeasonNumber
+		}
+		// Ensure uniqueness within the same series and season
 		var count int64
 		if err := h.db.Model(&models.Episode{}).
-			Where("series_id = ? AND episode_number = ? AND id <> ?", episode.SeriesID, *req.EpisodeNumber, episode.ID).
+			Where("series_id = ? AND season_number = ? AND episode_number = ? AND id <> ?", episode.SeriesID, seasonToCheck, *req.EpisodeNumber, episode.ID).
 			Count(&count).Error; err != nil {
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
 		if count > 0 {
-			http.Error(w, "Episode number already exists for this series", http.StatusConflict)
+			http.Error(w, "Episode number already exists for this season", http.StatusConflict)
 			return
 		}
 		updates["episode_number"] = *req.EpisodeNumber

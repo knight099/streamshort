@@ -415,11 +415,15 @@ func (h *AdminHandler) AdminCreateEpisode(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Check if episode number exists
+	// Check if episode number exists for this season
+	seasonNum := req.SeasonNumber
+	if seasonNum <= 0 {
+		seasonNum = 1 // Default to season 1
+	}
 	var count int64
-	h.db.Model(&models.Episode{}).Where("series_id = ? AND episode_number = ?", seriesID, req.EpisodeNumber).Count(&count)
+	h.db.Model(&models.Episode{}).Where("series_id = ? AND season_number = ? AND episode_number = ?", seriesID, seasonNum, req.EpisodeNumber).Count(&count)
 	if count > 0 {
-		http.Error(w, "Episode number already exists", http.StatusConflict)
+		http.Error(w, "Episode number already exists for this season", http.StatusConflict)
 		return
 	}
 
