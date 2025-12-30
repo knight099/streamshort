@@ -211,6 +211,47 @@ func (h *CreatorPaymentHandler) calculateEarningsSummary(creatorID string) (*mod
 	nextMonth := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
 	summary.NextPayoutDate = &nextMonth
 
+	// Calculate Performance Metrics
+	// 1. Total Watch Time: Sum from monthly_viewer_stats
+	var totalWatchTime int64
+	h.db.Model(&models.MonthlyViewerStats{}).
+		Where("creator_id = ?", creatorID).
+		Select("COALESCE(SUM(watch_time_seconds), 0)").
+		Scan(&totalWatchTime)
+
+	// 2. Unique Views: Count distinct users from monthly_viewer_stats
+	// Note: Series views might be more accurate for casual viewers, but monthly_viewer_stats tracks engagement
+	var uniqueViews int64
+	h.db.Model(&models.MonthlyViewerStats{}).
+		Where("creator_id = ?", creatorID).
+		Count(&uniqueViews)
+
+	// 3. Total Views: Sum from series owned by creator
+	var totalViews int64
+	h.db.Model(&models.Series{}).
+		Where("creator_id = ?", creatorID).
+		Select("COALESCE(SUM(view_count), 0)").
+		Scan(&totalViews)
+
+	// 4. ARPU: Total Earnings / Active Subscribers
+	arpu := 0.0
+	if subCount > 0 {
+		arpu = summary.TotalEarnings / float64(subCount)
+	}
+
+	// 5. RPM: (Total Earnings / Total Views) * 1000
+	rpm := 0.0
+	if totalViews > 0 {
+		rpm = (summary.TotalEarnings / float64(totalViews)) * 1000
+	}
+
+	summary.PerformanceMetrics = &models.PerformanceMetrics{
+		ARPU:           arpu,
+		UniqueViews:    uniqueViews,
+		RPM:            rpm,
+		TotalWatchTime: totalWatchTime,
+	}
+
 	return summary, nil
 }
 

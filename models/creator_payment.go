@@ -113,19 +113,28 @@ type CreatorDetails struct {
 
 // EarningsSummary represents the summary of a creator's earnings
 type EarningsSummary struct {
-	CreatorID          string             `json:"creator_id"`
-	CreatorDetails     *CreatorDetails    `json:"creator_details,omitempty"`
-	PayoutDetails      *PayoutDetailsInfo `json:"payout_details,omitempty"`
-	TotalEarnings      float64            `json:"total_earnings"`
-	PendingEarnings    float64            `json:"pending_earnings"`
-	PaidEarnings       float64            `json:"paid_earnings"`
-	AvailableForPayout float64            `json:"available_for_payout"`
-	MinimumThreshold   float64            `json:"minimum_threshold"`
-	CanRequestPayout   bool               `json:"can_request_payout"`
-	Breakdown          EarningsBreakdown  `json:"breakdown"`
-	Currency           string             `json:"currency"`
-	LastPayoutDate     *time.Time         `json:"last_payout_date"`
-	NextPayoutDate     *time.Time         `json:"next_payout_date"`
+	CreatorID          string              `json:"creator_id"`
+	CreatorDetails     *CreatorDetails     `json:"creator_details,omitempty"`
+	PayoutDetails      *PayoutDetailsInfo  `json:"payout_details,omitempty"`
+	TotalEarnings      float64             `json:"total_earnings"`
+	PendingEarnings    float64             `json:"pending_earnings"`
+	PaidEarnings       float64             `json:"paid_earnings"`
+	AvailableForPayout float64             `json:"available_for_payout"`
+	MinimumThreshold   float64             `json:"minimum_threshold"`
+	CanRequestPayout   bool                `json:"can_request_payout"`
+	Breakdown          EarningsBreakdown   `json:"breakdown"`
+	PerformanceMetrics *PerformanceMetrics `json:"performance_metrics,omitempty"`
+	Currency           string              `json:"currency"`
+	LastPayoutDate     *time.Time          `json:"last_payout_date"`
+	NextPayoutDate     *time.Time          `json:"next_payout_date"`
+}
+
+// PerformanceMetrics represents key performance indicators for a creator
+type PerformanceMetrics struct {
+	ARPU           float64 `json:"arpu"`             // Average Revenue Per User
+	UniqueViews    int64   `json:"unique_views"`     // Count of unique viewers
+	RPM            float64 `json:"rpm"`              // Revenue Per Mille (1000 views)
+	TotalWatchTime int64   `json:"total_watch_time"` // Total watch time in seconds
 }
 
 // EarningsBreakdown represents the breakdown of earnings by type
