@@ -205,7 +205,7 @@ go run cmd/migrate/main.go -action status
 
 ### **Environment Variables**
 ```bash
-export DATABASE_URL="postgres://user:pass@host:5432/streamshort"
+export DATABASE_URL="postgres://user:pass@host:5432/episodd"
 export JWT_SECRET="your-secret-key"
 ```
 
@@ -227,7 +227,7 @@ export JWT_SECRET="your-secret-key"
 ## 📚 **API Documentation**
 
 ### **OpenAPI Schema**
-The complete API specification is available in `openapi-streamshort.yaml` with:
+The complete API specification is available in `openapi-episodd.yaml` with:
 - Request/response schemas
 - Example payloads
 - Error codes

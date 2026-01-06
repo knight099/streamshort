@@ -1,6 +1,6 @@
-// @title StreamShort API
+// @title Episodd API
 // @version 1.0
-// @description API for StreamShort, a short-form video streaming platform.
+// @description API for Episodd, a short-form video streaming platform.
 // @termsOfService http://swagger.io/terms/
 
 // @contact.name API Support
@@ -18,14 +18,14 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"streamshort/config"
-	"streamshort/handlers"
-	"streamshort/middleware"
-	"streamshort/services"
+	"episodd/config"
+	"episodd/handlers"
+	"episodd/middleware"
+	"episodd/services"
 	"strings"
 	"time"
 
-	_ "streamshort/docs"
+	_ "episodd/docs"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"

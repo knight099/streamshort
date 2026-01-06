@@ -1,4 +1,4 @@
-module streamshort
+module episodd
 
 go 1.24.4
 

@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"streamshort/models"
-	"streamshort/services"
+	"episodd/models"
+	"episodd/services"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

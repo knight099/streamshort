@@ -5,7 +5,7 @@
 I've verified that:
 - ✅ Public key `K22WDLQZV9U4XV` exists in CloudFront
 - ✅ Public key matches your private key perfectly
-- ✅ Key group `streamshort-key-group` is configured
+- ✅ Key group `episodd-key-group` is configured
 - ✅ Behaviors for `transcoded/*` and `uploads/*` are set up correctly
 - ✅ "Restrict viewer access" is enabled
 - ✅ Key group is assigned to the behaviors
@@ -43,7 +43,7 @@ CloudFront is still returning 403, which means:
 
 Run this command to test:
 ```bash
-curl https://api.streamshort.in/debug/cloudfront | jq -r '.signed_url' | xargs curl -I | grep HTTP
+curl https://api.episodd.com/debug/cloudfront | jq -r '.signed_url' | xargs curl -I | grep HTTP
 ```
 
 **Expected progression:**
@@ -108,7 +108,7 @@ CloudFront has edge locations worldwide. When you update the distribution:
 
 ```bash
 # Run this every 5 minutes
-watch -n 300 'curl -s https://api.streamshort.in/debug/cloudfront | jq -r ".signed_url" | xargs curl -I | grep HTTP'
+watch -n 300 'curl -s https://api.episodd.com/debug/cloudfront | jq -r ".signed_url" | xargs curl -I | grep HTTP'
 ```
 
 Or manually:

@@ -126,4 +126,4 @@ async function uploadThumbnail(file: File, seriesId: string, token: string) {
 
 ---
 
-For complete documentation, see [THUMBNAIL_UPLOAD_API.md](file:///Users/vaibhaw/Developer/streamshort/THUMBNAIL_UPLOAD_API.md)
+For complete documentation, see [THUMBNAIL_UPLOAD_API.md](file:///Users/vaibhaw/Developer/episodd/THUMBNAIL_UPLOAD_API.md)

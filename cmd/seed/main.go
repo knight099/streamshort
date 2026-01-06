@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"streamshort/config"
-	"streamshort/models"
+	"episodd/config"
+	"episodd/models"
 
 	"github.com/joho/godotenv"
 	"gorm.io/gorm"
@@ -80,7 +80,7 @@ func seed(db *gorm.DB) error {
 	seriesList := []models.Series{
 		{
 			CreatorID:    creator.ID,
-			Title:        "Getting Started with StreamShort",
+			Title:        "Getting Started with Episodd",
 			Synopsis:     "A walkthrough series covering platform basics",
 			Language:     "en",
 			PriceType:    "free",

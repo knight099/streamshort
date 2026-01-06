@@ -26,7 +26,7 @@ Future<Map<String, dynamic>> createSubscription({
   
   try {
     final response = await dio.post(
-      'https://api.streamshort.in/api/payments/create-subscription',
+      'https://api.episodd.com/api/payments/create-subscription',
       options: Options(
         headers: {
           'Authorization': 'Bearer $authToken',
@@ -106,7 +106,7 @@ void openRazorpayCheckout({
     'key': 'rzp_test_xxxxx', // Your Razorpay Key ID from backend config
     'subscription_id': subscriptionId, // From API response
     'amount': (amount * 100).toInt(), // Amount in paise
-    'name': 'StreamShort',
+    'name': 'Episodd',
     'description': 'Subscription Payment',
     'prefill': {
       'contact': userPhone,
@@ -140,7 +140,7 @@ Future<bool> checkSubscriptionStatus(String authToken) async {
   
   try {
     final response = await dio.get(
-      'https://api.streamshort.in/api/subscriptions/check',
+      'https://api.episodd.com/api/subscriptions/check',
       options: Options(
         headers: {
           'Authorization': 'Bearer $authToken',
@@ -319,7 +319,7 @@ Based on your database:
 // Complete example
 class SubscriptionService {
   final Dio _dio = Dio();
-  final String baseUrl = 'https://api.streamshort.in';
+  final String baseUrl = 'https://api.episodd.com';
   
   Future<void> subscribeToPlan({
     required String planId,

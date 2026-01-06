@@ -11,7 +11,7 @@ Your video is getting 403 because:
 
 ```bash
 # Test if CloudFront signing works
-curl https://api.streamshort.in/debug/cloudfront | jq
+curl https://api.episodd.com/debug/cloudfront | jq
 
 # If you get a signed_url, test it:
 curl -I "PASTE_SIGNED_URL_HERE"
@@ -57,7 +57,7 @@ git commit -m "Add CloudFront debugging"
 git push
 
 # Wait for deployment, then test
-curl https://api.streamshort.in/debug/cloudfront
+curl https://api.episodd.com/debug/cloudfront
 
 # Or run the test script
 ./test_cloudfront_signing.sh
@@ -69,7 +69,7 @@ curl https://api.streamshort.in/debug/cloudfront
 # Check if episode has HLS manifest
 # (Replace with your episode ID)
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  https://api.streamshort.in/api/episodes/386db34f-e43f-42d3-ab83-66ad5e766c0a/manifest
+  https://api.episodd.com/api/episodes/386db34f-e43f-42d3-ab83-66ad5e766c0a/manifest
 ```
 
 If response has `manifest_url` with `transcoded/` in the path → transcoding is done!

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"streamshort/handlers"
+	"episodd/handlers"
 
 	"github.com/golang-jwt/jwt/v5"
 )

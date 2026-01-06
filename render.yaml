@@ -1,7 +1,7 @@
 # Render deployment configuration
 services:
   - type: web
-    name: streamshort-api
+    name: episodd-api
     runtime: go
     buildCommand: go build -o server .
     startCommand: ./server

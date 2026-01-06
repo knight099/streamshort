@@ -9,9 +9,9 @@ info:
     subscription payments (Razorpay), signed HLS playback, interactions, and admin moderation.
 
 servers:
-  - url: https://api.streamshort.com/v1
+  - url: https://api.episodd.com/v1
     description: Production server
-  - url: https://staging.api.streamshort.com/v1
+  - url: https://staging.api.episodd.com/v1
     description: Staging server
 
 tags:
@@ -187,7 +187,7 @@ components:
           example: 99
         thumbnail_url:
           type: string
-          example: "https://cdn.streamshort.com/thumbnails/series_001.jpg"
+          example: "https://cdn.episodd.com/thumbnails/series_001.jpg"
         status:
           type: string
           enum: [draft, published]
@@ -218,19 +218,19 @@ components:
         s3_master_path:
           type: string
           nullable: true
-          example: "s3://streamshort/uploads/ep001_master.mp4"
+          example: "s3://episodd/uploads/ep001_master.mp4"
         hls_manifest_url:
           type: string
           nullable: true
-          example: "https://cdn.streamshort.com/hls/ep001/manifest.m3u8"
+          example: "https://cdn.episodd.com/hls/ep001/manifest.m3u8"
         thumb_url:
           type: string
           nullable: true
-          example: "https://cdn.streamshort.com/thumbs/ep001.jpg"
+          example: "https://cdn.episodd.com/thumbs/ep001.jpg"
         captions_url:
           type: string
           nullable: true
-          example: "https://cdn.streamshort.com/captions/ep001.vtt"
+          example: "https://cdn.episodd.com/captions/ep001.vtt"
         status:
           type: string
           enum: [pending_upload, queued_transcode, ready, published]
@@ -301,7 +301,7 @@ components:
       properties:
         manifest_url:
           type: string
-          example: "https://cdn.streamshort.com/hls/episode1/index.m3u8?Expires=1723598700&Signature=..."
+          example: "https://cdn.episodd.com/hls/episode1/index.m3u8?Expires=1723598700&Signature=..."
         expires_at:
           type: string
           format: date-time
@@ -878,7 +878,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ManifestResponse'
               example:
-                manifest_url: "https://cdn.streamshort.com/hls/episode1/index.m3u8?Expires=1723598700&Signature=..."
+                manifest_url: "https://cdn.episodd.com/hls/episode1/index.m3u8?Expires=1723598700&Signature=..."
                 expires_at: "2025-08-15T12:00:00Z"
         '403':
           description: Not authorized (subscription missing)

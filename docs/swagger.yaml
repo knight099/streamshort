@@ -1016,12 +1016,12 @@ info:
     email: support@swagger.io
     name: API Support
     url: http://www.swagger.io/support
-  description: API for StreamShort, a short-form video streaming platform.
+  description: API for Episodd, a short-form video streaming platform.
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: http://swagger.io/terms/
-  title: StreamShort API
+  title: Episodd API
   version: "1.0"
 paths:
   /api/admin/content/approve:

@@ -11,7 +11,7 @@
 - New endpoint: `GET /debug/cloudfront`
 - Tests CloudFront signing without authentication
 - Returns signed URL and configuration details
-- Usage: `curl https://api.streamshort.in/debug/cloudfront`
+- Usage: `curl https://api.episodd.com/debug/cloudfront`
 
 ### 3. Created Test Script
 - `test_cloudfront_signing.sh` - Automated testing script
@@ -61,13 +61,13 @@ The 403 error is happening because:
 ./test_cloudfront_signing.sh
 
 # Or manually test the debug endpoint
-curl https://api.streamshort.in/debug/cloudfront | jq
+curl https://api.episodd.com/debug/cloudfront | jq
 ```
 
 ### 2. Test Signed URL Directly
 ```bash
 # Get a signed URL from the debug endpoint
-SIGNED_URL=$(curl -s https://api.streamshort.in/debug/cloudfront | jq -r '.signed_url')
+SIGNED_URL=$(curl -s https://api.episodd.com/debug/cloudfront | jq -r '.signed_url')
 
 # Test it
 curl -I "$SIGNED_URL"
@@ -126,7 +126,7 @@ After deploying these changes, check your backend logs for:
 
 2. **Test the debug endpoint** once deployed:
    ```bash
-   curl https://api.streamshort.in/debug/cloudfront
+   curl https://api.episodd.com/debug/cloudfront
    ```
 
 3. **Verify CloudFront configuration** in AWS Console

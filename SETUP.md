@@ -17,7 +17,7 @@ This guide will help you set up the Streamshort API with Neon database integrati
 4. Set the `DATABASE_URL` environment variable:
 
 ```bash
-export DATABASE_URL="postgres://username:password@your-neon-host:5432/streamshort?sslmode=require"
+export DATABASE_URL="postgres://username:password@your-neon-host:5432/episodd?sslmode=require"
 ```
 
 ### Option 2: Local PostgreSQL
@@ -25,7 +25,7 @@ export DATABASE_URL="postgres://username:password@your-neon-host:5432/streamshor
 If you prefer to use a local PostgreSQL database:
 
 ```bash
-export DATABASE_URL="postgres://postgres:password@localhost:5432/streamshort?sslmode=disable"
+export DATABASE_URL="postgres://postgres:password@localhost:5432/episodd?sslmode=disable"
 ```
 
 ## Environment Variables

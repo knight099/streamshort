@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"streamshort/models"
+	"episodd/models"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -34,7 +34,7 @@ func InitDB() *gorm.DB {
 
 	if dbURL == "" {
 		// Fallback to local development URL
-		dbURL = "postgres://postgres:password@localhost:5432/streamshort?sslmode=disable"
+		dbURL = "postgres://postgres:password@localhost:5432/episodd?sslmode=disable"
 		log.Println("Using default database URL. Set DATABASE_URL environment variable for production.")
 	}
 

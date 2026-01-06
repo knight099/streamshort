@@ -210,7 +210,7 @@ GET /api/episodes/{id}/manifest
 **Response:**
 ```json
 {
-  "manifest_url": "https://cdn.streamshort.com/hls/episode1/index.m3u8?Expires=1723598700&Signature=...",
+  "manifest_url": "https://cdn.episodd.com/hls/episode1/index.m3u8?Expires=1723598700&Signature=...",
   "expires_at": "2025-08-15T12:00:00Z"
 }
 ```

@@ -71,7 +71,7 @@ psql -d your_database -f migrations/003_create_refresh_tokens_table.sql
 Set the `DATABASE_URL` environment variable:
 
 ```bash
-export DATABASE_URL="postgres://username:password@your-neon-host:5432/streamshort?sslmode=require"
+export DATABASE_URL="postgres://username:password@your-neon-host:5432/episodd?sslmode=require"
 ```
 
 ## Migration Tracking

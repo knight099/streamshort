@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"streamshort/models"
+	"episodd/models"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

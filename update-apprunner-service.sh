@@ -5,8 +5,8 @@
 
 set -e
 
-SERVICE_ARN="arn:aws:apprunner:ap-south-1:462977978299:service/streamshort-service/98add3a882954c69831ece006ce6b392"
-IMAGE_URI="462977978299.dkr.ecr.ap-south-1.amazonaws.com/streamshort:latest"
+SERVICE_ARN="arn:aws:apprunner:ap-south-1:462977978299:service/episodd-service/98add3a882954c69831ece006ce6b392"
+IMAGE_URI="462977978299.dkr.ecr.ap-south-1.amazonaws.com/episodd:latest"
 
 echo "🚀 Updating App Runner service..."
 
@@ -20,21 +20,21 @@ aws apprunner update-service \
         "RuntimeEnvironmentVariables": {
           "PORT": "8080",
           "DATABASE_URL": "postgresql://neondb_owner:npg_ca10rQTZsBoV@ep-noisy-tree-a8tsfxu0-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require",
-          "JWT_SECRET": "streamshort",
+          "JWT_SECRET": "episodd",
           "JWT_ACCESS_EXPIRY": "15m",
           "JWT_REFRESH_EXPIRY": "720h",
           "SKIP_MIGRATIONS": "false",
           "FIREBASE_API_KEY": "AIzaSyC7qMtWKwzyPC07ToQGL2cGfLEf3q3l3Tw",
-          "FIREBASE_PROJECT_ID": "streamshort-49ffe",
+          "FIREBASE_PROJECT_ID": "episodd-49ffe",
           "RECAPTCHA_SITE_KEY": "6Lct4MwrAAAAAPwBxxtrfaSwNQ4o4DgMLrtvwJ1o",
-          "CORS_ALLOWED_ORIGINS": "http://localhost:3000, http://localhost:51284, http://localhost:8081, https://streamshortadmin.vercel.app/, https://admin.streamshort.in",
+          "CORS_ALLOWED_ORIGINS": "http://localhost:3000, http://localhost:51284, http://localhost:8081, https://episoddadmin.vercel.app/, https://admin.episodd.com",
           "RAZORPAY_KEY_ID": "rzp_test_RpciSJb0IiwFgQ",
           "RAZORPAY_KEY_SECRET": "PeLIUzX5PWh37ftFvjE9ssDM",
-          "RAZORPAY_WEBHOOK_SECRET": "streamshort-razorpay",
+          "RAZORPAY_WEBHOOK_SECRET": "episodd-razorpay",
           "AWS_REGION": "ap-south-1",
           "AWS_ACCESS_KEY_ID": "AKIAWXS5DJ65RY3KLZ6A",
           "AWS_SECRET_ACCESS_KEY": "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",
-          "AWS_S3_BUCKET": "streamshort-media",
+          "AWS_S3_BUCKET": "episodd-media",
           "AWS_CLOUDFRONT_DOMAIN": "djoxr6aauqbf6.cloudfront.net",
           "AWS_CLOUDFRONT_DISTRIBUTION_ID": "E35XJJN19W7KFF",
           "AWS_CLOUDFRONT_KEY_PAIR_ID": "K22WDLQZV9U4XV"

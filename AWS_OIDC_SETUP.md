@@ -79,7 +79,7 @@ cat > github-actions-permissions-policy.json << 'EOF'
                 "apprunner:UpdateService",
                 "apprunner:DescribeService"
             ],
-            "Resource": "arn:aws:apprunner:*:YOUR_ACCOUNT_ID:service/streamshort-api/*"
+            "Resource": "arn:aws:apprunner:*:YOUR_ACCOUNT_ID:service/episodd-api/*"
         }
     ]
 }
@@ -95,7 +95,7 @@ Create the IAM role that GitHub Actions will assume:
 aws iam create-role \
     --role-name GitHubActionsRole \
     --assume-role-policy-document file://github-oidc-trust-policy.json \
-    --description "Role for GitHub Actions to deploy StreamShort"
+    --description "Role for GitHub Actions to deploy Episodd"
 
 # Create the permissions policy
 aws iam create-policy \
@@ -126,7 +126,7 @@ Before running the commands, replace these placeholders:
 
 - `YOUR_ACCOUNT_ID`: Your AWS account ID (12-digit number)
 - `YOUR_GITHUB_USERNAME`: Your GitHub username or organization
-- `YOUR_REPO_NAME`: Your repository name (e.g., "streamshort-backend")
+- `YOUR_REPO_NAME`: Your repository name (e.g., "episodd-backend")
 
 ## Verification
 

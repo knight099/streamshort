@@ -1,6 +1,6 @@
 # Amazon ECR Repository Setup
 
-This document provides step-by-step instructions for creating and configuring an Amazon ECR repository for the StreamShort application.
+This document provides step-by-step instructions for creating and configuring an Amazon ECR repository for the Episodd application.
 
 ## Prerequisites
 
@@ -9,11 +9,11 @@ This document provides step-by-step instructions for creating and configuring an
 
 ## Create ECR Repository
 
-Create a private ECR repository to store the StreamShort Docker images:
+Create a private ECR repository to store the Episodd Docker images:
 
 ```bash
 aws ecr create-repository \
-    --repository-name streamshort \
+    --repository-name episodd \
     --region us-east-1 \
     --image-scanning-configuration scanOnPush=true \
     --encryption-configuration encryptionType=AES256
@@ -46,7 +46,7 @@ EOF
 
 # Apply the lifecycle policy
 aws ecr put-lifecycle-policy \
-    --repository-name streamshort \
+    --repository-name episodd \
     --lifecycle-policy-text file://ecr-lifecycle-policy.json
 ```
 
@@ -55,7 +55,7 @@ aws ecr put-lifecycle-policy \
 Confirm the repository was created successfully:
 
 ```bash
-aws ecr describe-repositories --repository-names streamshort
+aws ecr describe-repositories --repository-names episodd
 ```
 
 ## Get Repository URI
@@ -64,7 +64,7 @@ Retrieve the repository URI for use in GitHub Actions:
 
 ```bash
 aws ecr describe-repositories \
-    --repository-names streamshort \
+    --repository-names episodd \
     --query 'repositories[0].repositoryUri' \
     --output text
 ```
@@ -73,7 +73,7 @@ Save this URI as it will be needed for the GitHub Actions workflow configuration
 
 ## Repository Configuration Summary
 
-- **Repository Name**: streamshort
+- **Repository Name**: episodd
 - **Region**: us-east-1 (adjust as needed)
 - **Image Scanning**: Enabled on push
 - **Encryption**: AES-256

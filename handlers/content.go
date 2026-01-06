@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"streamshort/models"
-	"streamshort/services"
+	"episodd/models"
+	"episodd/services"
 
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"

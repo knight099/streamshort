@@ -15,7 +15,7 @@ The migration system consists of:
 ### 1. Set up your database URL
 
 ```bash
-export DATABASE_URL="postgres://username:password@your-neon-host:5432/streamshort?sslmode=require"
+export DATABASE_URL="postgres://username:password@your-neon-host:5432/episodd?sslmode=require"
 ```
 
 ### 2. Run migrations
@@ -188,7 +188,7 @@ psql $DATABASE_URL -c "SELECT 1;"
 
 ```bash
 # 1. Set database URL
-export DATABASE_URL="postgres://user:pass@host:5432/streamshort"
+export DATABASE_URL="postgres://user:pass@host:5432/episodd"
 
 # 2. Check current status
 go run cmd/migrate/main.go -action status

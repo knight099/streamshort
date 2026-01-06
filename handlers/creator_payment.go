@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"streamshort/models"
-	"streamshort/services"
+	"episodd/models"
+	"episodd/services"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
@@ -464,7 +464,7 @@ func (h *CreatorPaymentHandler) initiateRazorpayPayout(creatorID string, amount 
 		amount,
 		"INR",
 		method,
-		"StreamShort Creator Payout",
+		"Episodd Creator Payout",
 	)
 	if err != nil {
 		return "", err

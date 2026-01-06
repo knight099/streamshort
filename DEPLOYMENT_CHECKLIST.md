@@ -66,7 +66,7 @@ After deployment:
 # Should see: "Applied SQL migration: 031_add_file_type_to_upload_requests"
 
 # Test the API
-curl https://api.streamshort.in/health
+curl https://api.episodd.com/health
 ```
 
 ---
@@ -88,7 +88,7 @@ If you want to test locally first:
 
 ```bash
 # 1. Run migration on local database
-psql postgres://postgres:password@localhost:5432/streamshort -f migrations/031_add_file_type_to_upload_requests.sql
+psql postgres://postgres:password@localhost:5432/episodd -f migrations/031_add_file_type_to_upload_requests.sql
 
 # 2. Restart your local server
 # (Already doing this with the build)

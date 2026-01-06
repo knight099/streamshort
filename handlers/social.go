@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"streamshort/models"
+	"episodd/models"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"

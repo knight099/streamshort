@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"streamshort/models"
+	"episodd/models"
 
 	"gorm.io/gorm"
 )

@@ -59,7 +59,7 @@ The Key-Pair-ID `K22WDLQZV9U4XV` is either:
 2. Check if any key group contains the public key `K22WDLQZV9U4XV`
 3. If not, create a new key group:
    - Click "Create key group"
-   - Name: `streamshort-signing-keys`
+   - Name: `episodd-signing-keys`
    - Add public key: `K22WDLQZV9U4XV`
    - Click "Create"
 
@@ -89,7 +89,7 @@ The Key-Pair-ID `K22WDLQZV9U4XV` is either:
 ### Step 5: Test Again
 After propagation completes:
 ```bash
-curl https://api.streamshort.in/debug/cloudfront | jq -r '.signed_url' | xargs curl -I
+curl https://api.episodd.com/debug/cloudfront | jq -r '.signed_url' | xargs curl -I
 ```
 
 Expected result: **HTTP/2 404** (file doesn't exist, but signing works!)
@@ -116,7 +116,7 @@ Compare this with the public key uploaded to CloudFront. They must match exactly
 ./test_cloudfront_signing.sh
 
 # Or manually:
-curl https://api.streamshort.in/debug/cloudfront | jq
+curl https://api.episodd.com/debug/cloudfront | jq
 ```
 
 ## Expected Timeline

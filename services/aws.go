@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"streamshort/config"
+	"episodd/config"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"

@@ -30,7 +30,7 @@ SwIDAQAB
 
 #### Create the Public Key:
 1. Click **"Create public key"**
-2. **Name**: `streamshort-signing-key`
+2. **Name**: `episodd-signing-key`
 3. **Key**: Paste the public key from above (including BEGIN/END lines)
 4. Click **"Create"**
 5. **IMPORTANT**: Note the Key ID that gets generated
@@ -40,7 +40,7 @@ SwIDAQAB
 
 1. Go to: https://console.aws.amazon.com/cloudfront/v4/home#/keygrouplist
 2. Click **"Create key group"**
-3. **Name**: `streamshort-trusted-signers`
+3. **Name**: `episodd-trusted-signers`
 4. **Public keys**: Select the key `K22WDLQZV9U4XV` (or the one you just created)
 5. Click **"Create key group"**
 6. Note the Key Group ID (e.g., `K2XXXXXXXXXXXX`)
@@ -56,13 +56,13 @@ SwIDAQAB
 4. Click **"Create behavior"**
 5. Fill in:
    - **Path pattern**: `transcoded/*`
-   - **Origin**: Select your S3 bucket origin (streamshort-media)
+   - **Origin**: Select your S3 bucket origin (episodd-media)
    - **Viewer protocol policy**: Redirect HTTP to HTTPS
    - **Allowed HTTP methods**: GET, HEAD, OPTIONS
    - **Cache policy**: CachingOptimized (or your preferred policy)
    - **Restrict viewer access**: **Yes** ← CRITICAL!
    - **Trusted authorization type**: Trusted key groups
-   - **Trusted key groups**: Select `streamshort-trusted-signers` (the one you created in Step 2)
+   - **Trusted key groups**: Select `episodd-trusted-signers` (the one you created in Step 2)
 6. Click **"Create behavior"**
 
 #### Create Behavior for `uploads/*`:
@@ -76,7 +76,7 @@ SwIDAQAB
    - **Cache policy**: CachingOptimized
    - **Restrict viewer access**: **Yes** ← CRITICAL!
    - **Trusted authorization type**: Trusted key groups
-   - **Trusted key groups**: Select `streamshort-trusted-signers`
+   - **Trusted key groups**: Select `episodd-trusted-signers`
 9. Click **"Create behavior"**
 
 #### Verify Default Behavior:
@@ -97,10 +97,10 @@ After propagation completes:
 
 ```bash
 # Test the debug endpoint
-curl https://api.streamshort.in/debug/cloudfront | jq
+curl https://api.episodd.com/debug/cloudfront | jq
 
 # Get the signed URL and test it
-curl https://api.streamshort.in/debug/cloudfront | jq -r '.signed_url' | xargs curl -I
+curl https://api.episodd.com/debug/cloudfront | jq -r '.signed_url' | xargs curl -I
 ```
 
 **Expected result**: 
@@ -168,7 +168,7 @@ Once this is working:
 
 If you're stuck:
 1. Take a screenshot of the CloudFront Behaviors tab
-2. Run: `curl https://api.streamshort.in/debug/cloudfront | jq`
+2. Run: `curl https://api.episodd.com/debug/cloudfront | jq`
 3. Share the output and screenshot
 
 ## Estimated Time

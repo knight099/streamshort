@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"streamshort/models"
-	"streamshort/services"
+	"episodd/models"
+	"episodd/services"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"

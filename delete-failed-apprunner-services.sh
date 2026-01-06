@@ -5,10 +5,10 @@ echo "Deleting failed App Runner services..."
 
 # Failed services to delete
 FAILED_SERVICES=(
-    "arn:aws:apprunner:ap-south-1:462977978299:service/streamshort-minimal-test/50729a2b440b44d29226f1555cd9e073"
-    "arn:aws:apprunner:ap-south-1:462977978299:service/streamshort-app-v3/793483e2c06b44e283199c87aba11a81"
-    "arn:aws:apprunner:ap-south-1:462977978299:service/streamshort-app-v2/3ab575478c964f49b44e855968b4daf4"
-    "arn:aws:apprunner:ap-south-1:462977978299:service/streamshort-app/c199e6282e384892abd18f114211a951"
+    "arn:aws:apprunner:ap-south-1:462977978299:service/episodd-minimal-test/50729a2b440b44d29226f1555cd9e073"
+    "arn:aws:apprunner:ap-south-1:462977978299:service/episodd-app-v3/793483e2c06b44e283199c87aba11a81"
+    "arn:aws:apprunner:ap-south-1:462977978299:service/episodd-app-v2/3ab575478c964f49b44e855968b4daf4"
+    "arn:aws:apprunner:ap-south-1:462977978299:service/episodd-app/c199e6282e384892abd18f114211a951"
 )
 
 for service_arn in "${FAILED_SERVICES[@]}"; do

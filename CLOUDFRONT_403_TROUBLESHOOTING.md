@@ -25,7 +25,7 @@ Your CloudFront distribution (`E35XJJN19W7KFF`) needs TWO separate behaviors:
 - **Path Pattern**: `transcoded/*`
 - **Restrict Viewer Access**: Yes
 - **Trusted Key Groups**: Must include key group with public key ID `K22WDLQZV9U4XV`
-- **Origin**: S3 bucket `streamshort-media`
+- **Origin**: S3 bucket `episodd-media`
 - **Viewer Protocol Policy**: Redirect HTTP to HTTPS
 - **Allowed HTTP Methods**: GET, HEAD, OPTIONS
 - **Cache Policy**: CachingOptimized or custom with appropriate TTL
@@ -49,10 +49,10 @@ Your CloudFront distribution (`E35XJJN19W7KFF`) needs TWO separate behaviors:
 
 ```bash
 # Test CloudFront signing configuration
-curl https://api.streamshort.in/debug/cloudfront
+curl https://api.episodd.com/debug/cloudfront
 
 # Test with specific path
-curl "https://api.streamshort.in/debug/cloudfront?path=transcoded/test/index.m3u8"
+curl "https://api.episodd.com/debug/cloudfront?path=transcoded/test/index.m3u8"
 ```
 
 Expected response:

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# StreamShort Environment Setup Script
+# Episodd Environment Setup Script
 
-echo "🚀 Setting up StreamShort environment variables..."
+echo "🚀 Setting up Episodd environment variables..."
 
 # Check if .env already exists
 if [ -f ".env" ]; then
@@ -16,7 +16,7 @@ cat > .env << EOF
 PORT=8080
 
 # Database Configuration
-DATABASE_URL=postgres://postgres:password@localhost:5432/streamshort?sslmode=disable
+DATABASE_URL=postgres://postgres:password@localhost:5432/episodd?sslmode=disable
 
 # Migration Configuration
 SKIP_MIGRATIONS=false

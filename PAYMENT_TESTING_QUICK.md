@@ -148,9 +148,9 @@ curl -X POST http://localhost:8080/api/subscriptions/{subscription_id}/cancel \
 
 ## 📚 Full Documentation
 
-- **Complete Guide**: [`PAYMENT_TESTING_GUIDE.md`](file:///Users/vaibhaw/Developer/streamshort/PAYMENT_TESTING_GUIDE.md)
-- **Webhook Setup**: [`RAZORPAY_WEBHOOK_SETUP.md`](file:///Users/vaibhaw/Developer/streamshort/RAZORPAY_WEBHOOK_SETUP.md)
-- **API Guide**: [`SUBSCRIPTION_API_GUIDE.md`](file:///Users/vaibhaw/Developer/streamshort/SUBSCRIPTION_API_GUIDE.md)
+- **Complete Guide**: [`PAYMENT_TESTING_GUIDE.md`](file:///Users/vaibhaw/Developer/episodd/PAYMENT_TESTING_GUIDE.md)
+- **Webhook Setup**: [`RAZORPAY_WEBHOOK_SETUP.md`](file:///Users/vaibhaw/Developer/episodd/RAZORPAY_WEBHOOK_SETUP.md)
+- **API Guide**: [`SUBSCRIPTION_API_GUIDE.md`](file:///Users/vaibhaw/Developer/episodd/SUBSCRIPTION_API_GUIDE.md)
 
 ---
 

@@ -1,7 +1,7 @@
 # Creator Payment Plan Specification
 
 ## Overview
-This document outlines the payment structure, revenue sharing model, and API requirements for creator monetization on StreamShort.
+This document outlines the payment structure, revenue sharing model, and API requirements for creator monetization on Episodd.
 
 ---
 
@@ -344,7 +344,7 @@ Use Razorpay Payouts API for bank transfers:
   "purpose": "payout",
   "queue_if_low_balance": true,
   "reference_id": "payout_uuid",
-  "narration": "StreamShort Creator Payout"
+  "narration": "Episodd Creator Payout"
 }
 ```
 

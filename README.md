@@ -1,6 +1,6 @@
-# StreamShort
+# Episodd
 
-[![Deploy to AWS](https://github.com/YOUR_USERNAME/streamshort/actions/workflows/deploy.yml/badge.svg)](https://github.com/YOUR_USERNAME/streamshort/actions/workflows/deploy.yml)
+[![Deploy to AWS](https://github.com/YOUR_USERNAME/episodd/actions/workflows/deploy.yml/badge.svg)](https://github.com/YOUR_USERNAME/episodd/actions/workflows/deploy.yml)
 
 A Go-based backend service for short-form video streaming with creator monetization.
 

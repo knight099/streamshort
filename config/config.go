@@ -47,7 +47,7 @@ func LoadConfig() *Config {
 
 	config := &Config{
 		Port:        getEnv("PORT", "8080"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/streamshort?sslmode=disable"),
+		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/episodd?sslmode=disable"),
 		// Support both SKIP_MIGRATION and SKIP_MIGRATIONS (prefer singular if set)
 		SkipMigrations: func() bool {
 			singular := os.Getenv("SKIP_MIGRATION")

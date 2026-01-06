@@ -1,6 +1,6 @@
 # AWS Deployment Guide
 
-This guide provides step-by-step instructions for setting up the complete CI/CD pipeline to deploy StreamShort to AWS using GitHub Actions, Amazon ECR, and AWS App Runner.
+This guide provides step-by-step instructions for setting up the complete CI/CD pipeline to deploy Episodd to AWS using GitHub Actions, Amazon ECR, and AWS App Runner.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ First, create a private ECR repository to store your Docker images:
 ```bash
 # Set your variables
 export AWS_REGION="us-east-1"  # Change to your preferred region
-export ECR_REPOSITORY="streamshort"
+export ECR_REPOSITORY="episodd"
 
 # Create ECR repository
 aws ecr create-repository \
@@ -65,7 +65,7 @@ Create an IAM role that GitHub Actions will assume:
 ```bash
 # Set your variables
 export GITHUB_ORG="your-github-username"  # Replace with your GitHub username/org
-export GITHUB_REPO="streamshort"          # Replace with your repository name
+export GITHUB_REPO="episodd"          # Replace with your repository name
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
 # Create trust policy file
@@ -146,7 +146,7 @@ Create the App Runner service that will host your application:
 # Create App Runner service configuration file
 cat > apprunner-service.json << EOF
 {
-    "ServiceName": "streamshort-api",
+    "ServiceName": "episodd-api",
     "SourceConfiguration": {
         "ImageRepository": {
             "ImageIdentifier": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest",
@@ -187,7 +187,7 @@ rm apprunner-service.json
 # Get the service ARN (you'll need this for GitHub secrets)
 aws apprunner list-services \
     --region $AWS_REGION \
-    --query 'ServiceSummaryList[?ServiceName==`streamshort-api`].ServiceArn' \
+    --query 'ServiceSummaryList[?ServiceName==`episodd-api`].ServiceArn' \
     --output text
 ```
 
@@ -214,7 +214,7 @@ Add the following secrets to your GitHub repository (Settings → Secrets and va
    ```bash
    aws apprunner list-services \
        --region $AWS_REGION \
-       --query 'ServiceSummaryList[?ServiceName==`streamshort-api`].ServiceArn' \
+       --query 'ServiceSummaryList[?ServiceName==`episodd-api`].ServiceArn' \
        --output text
    ```
 
@@ -230,8 +230,8 @@ Add the following secrets to your GitHub repository (Settings → Secrets and va
 
 1. **Test Docker build locally:**
    ```bash
-   docker build -t streamshort-test .
-   docker run -p 8080:8080 streamshort-test
+   docker build -t episodd-test .
+   docker run -p 8080:8080 episodd-test
    ```
 
 2. **Test health endpoint:**

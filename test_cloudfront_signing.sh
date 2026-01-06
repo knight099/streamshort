@@ -5,7 +5,7 @@
 
 set -e
 
-API_URL="${API_URL:-https://api.streamshort.in}"
+API_URL="${API_URL:-https://api.episodd.com}"
 EPISODE_ID="${1:-386db34f-e43f-42d3-ab83-66ad5e766c0a}"
 
 echo "========================================="

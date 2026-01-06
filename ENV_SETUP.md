@@ -1,6 +1,6 @@
 # Environment Variables Setup
 
-This document explains how to set up environment variables for the StreamShort application.
+This document explains how to set up environment variables for the Episodd application.
 
 ## Quick Setup
 
@@ -15,7 +15,7 @@ This document explains how to set up environment variables for the StreamShort a
    PORT=8080
    
    # Database Configuration
-   DATABASE_URL=postgres://username:password@localhost:5432/streamshort?sslmode=disable
+   DATABASE_URL=postgres://username:password@localhost:5432/episodd?sslmode=disable
    
    # Migration Configuration
    SKIP_MIGRATIONS=false
@@ -47,7 +47,7 @@ For local development, you can create a `.env.local` file which will override th
 ```bash
 # .env.local
 PORT=3000
-DATABASE_URL=postgres://postgres:password@localhost:5432/streamshort_dev?sslmode=disable
+DATABASE_URL=postgres://postgres:password@localhost:5432/episodd_dev?sslmode=disable
 ```
 
 ## Security Notes

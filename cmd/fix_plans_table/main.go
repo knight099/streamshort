@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"streamshort/config"
+	"episodd/config"
 
 	"github.com/joho/godotenv"
 )

@@ -107,7 +107,7 @@ Create `test_payment.html`:
                 const options = {
                     key: 'rzp_test_your_key_id', // Your Razorpay Test Key ID
                     subscription_id: data.subscription_id,
-                    name: 'StreamShort',
+                    name: 'Episodd',
                     description: 'Monthly Subscription',
                     image: 'https://your-logo-url.com/logo.png',
                     handler: function(response) {

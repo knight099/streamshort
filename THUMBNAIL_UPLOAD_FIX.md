@@ -33,7 +33,7 @@ Should be:
 ssh your-production-server
 
 # Navigate to project directory
-cd /path/to/streamshort
+cd /path/to/episodd
 
 # Run the migration
 psql $DATABASE_URL -f migrations/031_add_file_type_to_upload_requests.sql
@@ -108,7 +108,7 @@ Future<void> uploadThumbnail(File imageFile, String seriesId) async {
   await dio.post(
     '/api/content/uploads/$uploadId/notify',
     data: {
-      's3_path': 's3://streamshort-media/thumbnails/$uploadId/${imageFile.path.split('/').last}',
+      's3_path': 's3://episodd-media/thumbnails/$uploadId/${imageFile.path.split('/').last}',
       'size_bytes': await imageFile.length(),
     },
   );

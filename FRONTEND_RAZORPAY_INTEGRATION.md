@@ -75,7 +75,7 @@ var options = {
   'key': 'rzp_test_xxxxx', // Your Razorpay Key ID
   'subscription_id': response.subscription_id, // Use the subscription_id from API
   'amount': amount * 100, // Amount in paise
-  'name': 'StreamShort',
+  'name': 'Episodd',
   'description': 'Subscription',
 };
 

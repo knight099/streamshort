@@ -1,11 +1,11 @@
 # AWS App Runner Service Setup
 
-This document provides instructions for creating and configuring an AWS App Runner service to host the StreamShort application.
+This document provides instructions for creating and configuring an AWS App Runner service to host the Episodd application.
 
 ## Prerequisites
 
 - AWS CLI installed and configured
-- ECR repository created with StreamShort image
+- ECR repository created with Episodd image
 - IAM role for App Runner service access
 - Environment variables and secrets configured
 
@@ -48,10 +48,10 @@ Create the service configuration file:
 ```bash
 cat > apprunner-service-config.json << 'EOF'
 {
-    "ServiceName": "streamshort-api",
+    "ServiceName": "episodd-api",
     "SourceConfiguration": {
         "ImageRepository": {
-            "ImageIdentifier": "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/streamshort:latest",
+            "ImageIdentifier": "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/episodd:latest",
             "ImageConfiguration": {
                 "Port": "8080",
                 "RuntimeEnvironmentVariables": {
@@ -86,7 +86,7 @@ Create a custom auto-scaling configuration:
 
 ```bash
 aws apprunner create-auto-scaling-configuration \
-    --auto-scaling-configuration-name "streamshort-autoscaling" \
+    --auto-scaling-configuration-name "episodd-autoscaling" \
     --max-concurrency 100 \
     --min-size 1 \
     --max-size 10
@@ -109,10 +109,10 @@ Alternatively, create the service directly with CLI parameters:
 
 ```bash
 aws apprunner create-service \
-    --service-name "streamshort-api" \
+    --service-name "episodd-api" \
     --source-configuration '{
         "ImageRepository": {
-            "ImageIdentifier": "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/streamshort:latest",
+            "ImageIdentifier": "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/episodd:latest",
             "ImageConfiguration": {
                 "Port": "8080",
                 "RuntimeEnvironmentVariables": {
@@ -153,7 +153,7 @@ aws apprunner update-service \
     --service-arn "YOUR_SERVICE_ARN" \
     --source-configuration '{
         "ImageRepository": {
-            "ImageIdentifier": "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/streamshort:latest",
+            "ImageIdentifier": "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/episodd:latest",
             "ImageConfiguration": {
                 "Port": "8080",
                 "RuntimeEnvironmentVariables": {
@@ -169,7 +169,7 @@ aws apprunner update-service \
 
 ## Service Configuration Summary
 
-- **Service Name**: streamshort-api
+- **Service Name**: episodd-api
 - **Port**: 8080
 - **CPU**: 1 vCPU
 - **Memory**: 2 GB
@@ -183,7 +183,7 @@ Retrieve service details:
 
 ```bash
 # Get service ARN and URL
-aws apprunner list-services --query 'ServiceSummaryList[?ServiceName==`streamshort-api`]'
+aws apprunner list-services --query 'ServiceSummaryList[?ServiceName==`episodd-api`]'
 
 # Get detailed service information
 aws apprunner describe-service --service-arn "YOUR_SERVICE_ARN"
@@ -213,7 +213,7 @@ App Runner automatically provides:
 
 Access logs via:
 ```bash
-aws logs describe-log-groups --log-group-name-prefix "/aws/apprunner/streamshort-api"
+aws logs describe-log-groups --log-group-name-prefix "/aws/apprunner/episodd-api"
 ```
 
 ## Next Steps

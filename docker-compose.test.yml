@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: streamshort
+      POSTGRES_DB: episodd
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
@@ -32,7 +32,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DATABASE_URL: "postgres://postgres:password@postgres:5432/streamshort?sslmode=disable"
+      DATABASE_URL: "postgres://postgres:password@postgres:5432/episodd?sslmode=disable"
       REDIS_URL: "redis://redis:6379/0"
       PORT: "8080"
     depends_on:

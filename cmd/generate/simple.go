@@ -10,7 +10,7 @@ import (
 	"text/template"
 	"time"
 
-	"streamshort/models"
+	"episodd/models"
 )
 
 type SimpleMigrationData struct {

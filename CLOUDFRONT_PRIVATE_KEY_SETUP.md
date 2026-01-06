@@ -11,7 +11,7 @@ Added `AWS_CLOUDFRONT_PRIVATE_KEY` to the GitHub Actions workflow and updated th
 You need to add the CloudFront private key as a GitHub secret:
 
 ### Steps:
-1. Go to your GitHub repository: https://github.com/knight099/streamshort
+1. Go to your GitHub repository: https://github.com/knight099/episodd
 2. Click **Settings** → **Secrets and variables** → **Actions**
 3. Click **New repository secret**
 4. Name: `AWS_CLOUDFRONT_PRIVATE_KEY`

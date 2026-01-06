@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"streamshort/models"
+	"episodd/models"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
