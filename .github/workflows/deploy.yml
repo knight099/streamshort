@@ -60,7 +60,12 @@ jobs:
         CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
         IMAGE_ID: ${{ steps.build-image.outputs.image }}
       run: |
-        # Build source-configuration JSON via jq to safely handle multi-line private key
+        # App Runner rejects env var values containing actual newlines.
+        # Convert the PEM key's newlines to literal \n so it fits on one line.
+        # The Go service will unescape \n back to newlines when loading the key.
+        CF_KEY_ESCAPED=$(printf '%s' "$AWS_CLOUDFRONT_PRIVATE_KEY" | awk 'NR>1{printf "\\n"} {printf "%s",$0}')
+
+        # Build source-configuration JSON via jq to safely handle special characters
         SOURCE_CONFIG=$(jq -n \
           --arg image "$IMAGE_ID" \
           --arg db_url "$DATABASE_URL" \
@@ -70,7 +75,7 @@ jobs:
           --arg razorpay_key_id "$RAZORPAY_KEY_ID" \
           --arg razorpay_key_secret "$RAZORPAY_KEY_SECRET" \
           --arg s3_bucket "$AWS_S3_BUCKET" \
-          --arg cf_private_key "$AWS_CLOUDFRONT_PRIVATE_KEY" \
+          --arg cf_private_key "$CF_KEY_ESCAPED" \
           --arg cors_origins "$CORS_ALLOWED_ORIGINS" \
           '{
             "ImageRepository": {

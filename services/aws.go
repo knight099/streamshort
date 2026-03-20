@@ -71,7 +71,9 @@ func NewAWSService(cfg *config.Config) (*AWSService, error) {
 		var err error
 
 		if cfg.AWSCloudFrontPrivateKey != "" {
-			keyData = []byte(cfg.AWSCloudFrontPrivateKey)
+			// App Runner env vars cannot contain newlines, so the key is stored
+			// with literal \n sequences. Unescape them back to real newlines.
+			keyData = []byte(strings.ReplaceAll(cfg.AWSCloudFrontPrivateKey, `\n`, "\n"))
 		} else if cfg.AWSCloudFrontPrivateKeyPath != "" {
 			keyData, err = os.ReadFile(cfg.AWSCloudFrontPrivateKeyPath)
 			if err != nil {
