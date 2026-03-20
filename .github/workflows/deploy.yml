@@ -48,37 +48,57 @@ jobs:
 
     - name: Deploy to App Runner
       id: deploy-apprunner
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+        RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+        AWS_CLOUDFRONT_PRIVATE_KEY: ${{ secrets.AWS_CLOUDFRONT_PRIVATE_KEY }}
+        CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
+        IMAGE_ID: ${{ steps.build-image.outputs.image }}
       run: |
-        # Update App Runner service with new image
-        aws apprunner update-service \
-          --service-arn "${{ secrets.APPRUNNER_SERVICE_ARN }}" \
-          --source-configuration '{
+        # Build source-configuration JSON via jq to safely handle multi-line private key
+        SOURCE_CONFIG=$(jq -n \
+          --arg image "$IMAGE_ID" \
+          --arg db_url "$DATABASE_URL" \
+          --arg jwt_secret "$JWT_SECRET" \
+          --arg firebase_api_key "$FIREBASE_API_KEY" \
+          --arg firebase_project_id "$FIREBASE_PROJECT_ID" \
+          --arg razorpay_key_id "$RAZORPAY_KEY_ID" \
+          --arg razorpay_key_secret "$RAZORPAY_KEY_SECRET" \
+          --arg s3_bucket "$AWS_S3_BUCKET" \
+          --arg cf_private_key "$AWS_CLOUDFRONT_PRIVATE_KEY" \
+          --arg cors_origins "$CORS_ALLOWED_ORIGINS" \
+          '{
             "ImageRepository": {
-              "ImageIdentifier": "${{ steps.build-image.outputs.image }}",
+              "ImageIdentifier": $image,
               "ImageConfiguration": {
                 "Port": "8080",
                 "RuntimeEnvironmentVariables": {
                   "PORT": "8080",
-                  "DATABASE_URL": "${{ secrets.DATABASE_URL }}",
-                  "JWT_SECRET": "${{ secrets.JWT_SECRET }}",
+                  "DATABASE_URL": $db_url,
+                  "JWT_SECRET": $jwt_secret,
                   "JWT_ACCESS_EXPIRY": "15m",
                   "JWT_REFRESH_EXPIRY": "720h",
                   "SKIP_MIGRATIONS": "true",
-                  "FIREBASE_API_KEY": "${{ secrets.FIREBASE_API_KEY }}",
-                  "FIREBASE_PROJECT_ID": "${{ secrets.FIREBASE_PROJECT_ID }}",
+                  "FIREBASE_API_KEY": $firebase_api_key,
+                  "FIREBASE_PROJECT_ID": $firebase_project_id,
                   "RECAPTCHA_SITE_KEY": "6Lct4MwrAAAAAPwBxxtrfaSwNQ4o4DgMLrtvwJ1o",
-                  "RAZORPAY_KEY_ID": "${{ secrets.RAZORPAY_KEY_ID }}",
-                  "RAZORPAY_KEY_SECRET": "${{ secrets.RAZORPAY_KEY_SECRET }}",
+                  "RAZORPAY_KEY_ID": $razorpay_key_id,
+                  "RAZORPAY_KEY_SECRET": $razorpay_key_secret,
                   "RAZORPAY_WEBHOOK_SECRET": "streamshort-razorpay",
                   "AWS_REGION": "ap-south-1",
-                  "AWS_ACCESS_KEY_ID": "${{ secrets.AWS_ACCESS_KEY_ID }}",
-                  "AWS_SECRET_ACCESS_KEY": "${{ secrets.AWS_SECRET_ACCESS_KEY }}",
-                  "AWS_S3_BUCKET": "${{ secrets.AWS_S3_BUCKET }}",
+                  "AWS_ACCESS_KEY_ID": $ENV.AWS_ACCESS_KEY_ID,
+                  "AWS_SECRET_ACCESS_KEY": $ENV.AWS_SECRET_ACCESS_KEY,
+                  "AWS_S3_BUCKET": $s3_bucket,
                   "AWS_CLOUDFRONT_DOMAIN": "djoxr6aauqbf6.cloudfront.net",
                   "AWS_CLOUDFRONT_DISTRIBUTION_ID": "E35XJJN19W7KFF",
                   "AWS_CLOUDFRONT_KEY_PAIR_ID": "K22WDLQZV9U4XV",
-                  "AWS_CLOUDFRONT_PRIVATE_KEY": "${{ secrets.AWS_CLOUDFRONT_PRIVATE_KEY }}",
-                  "CORS_ALLOWED_ORIGINS": "${{ secrets.CORS_ALLOWED_ORIGINS }}"
+                  "AWS_CLOUDFRONT_PRIVATE_KEY": $cf_private_key,
+                  "CORS_ALLOWED_ORIGINS": $cors_origins
                 }
               },
               "ImageRepositoryType": "ECR"
@@ -87,4 +107,8 @@ jobs:
             "AuthenticationConfiguration": {
               "AccessRoleArn": "arn:aws:iam::462977978299:role/AppRunnerECRAccessRole"
             }
-          }'
+          }')
+
+        aws apprunner update-service \
+          --service-arn "${{ secrets.APPRUNNER_SERVICE_ARN }}" \
+          --source-configuration "$SOURCE_CONFIG"
